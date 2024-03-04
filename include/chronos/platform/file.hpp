@@ -26,6 +26,7 @@
 #include <kstd/defaults.hpp>
 #include <kstd/result.hpp>
 #include <stdexcept>
+#include <sys/mman.h>
 
 #if defined(PLATFORM_LINUX)
 #include <fcntl.h>
@@ -47,9 +48,30 @@ namespace chronos::platform {
 
     KSTD_BITFLAGS(u8, FileFlags, READ = 0b001, WRITE = 0b010, EXECUTE = 0b100);
 
+    class FileMapping final {
+        u8* _pointer;
+        usize _size;
+
+        friend struct File;
+        FileMapping(u8* file_ptr, usize size) noexcept;
+
+        public:
+        FileMapping(FileMapping&& other) noexcept;
+        ~FileMapping() noexcept;
+        KSTD_NO_COPY(FileMapping, FileMapping);
+
+        [[nodiscard]] inline auto get_size() const noexcept -> usize {
+            return _size;
+        }
+
+        auto operator=(FileMapping&& other) noexcept -> FileMapping&;
+        [[nodiscard]] auto operator*() const noexcept -> const u8*;
+    };
+
     class File final {
         std::filesystem::path _path;
         FileHandle _file_handle;
+        FileFlags _flags;
 
         public:
         File(std::filesystem::path file_path, FileFlags flags);
@@ -57,6 +79,7 @@ namespace chronos::platform {
         ~File() noexcept;
         KSTD_NO_COPY(File, File);
 
+        [[nodiscard]] auto map_into_memory() const noexcept -> kstd::Result<FileMapping>;
         [[nodiscard]] auto get_file_size() const noexcept -> kstd::Result<usize>;
 
         auto operator=(File&& other) noexcept -> File&;

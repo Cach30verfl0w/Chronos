@@ -1,3 +1,4 @@
+#include "chronos/platform/file.hpp"
 #include "chronos/utils.hpp"
 #include <cxxopts.hpp>
 #include <filesystem>

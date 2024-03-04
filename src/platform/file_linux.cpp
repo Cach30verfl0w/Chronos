@@ -19,20 +19,52 @@
 #define CHRONOS_STAT struct ::stat64
 #define CHRONOS_FSTAT ::fstat64
 #define CHRONOS_OPEN ::open64
+#define CHRONOS_MMAP ::mmap64
 #else
 #define CHRONOS_STAT struct ::stat
 #define CHRONOS_FSTAT ::fstat
 #define CHRONOS_OPEN ::open
+#define CHRONOS_MMAP ::mmap
 #endif
 
 namespace chronos::platform {
+    FileMapping::FileMapping(u8* file_ptr, usize size) noexcept ://NOLINT
+            _pointer {file_ptr},
+            _size {size} {
+    }
+
+    FileMapping::FileMapping(chronos::platform::FileMapping&& other) noexcept ://NOLINT
+            _pointer {other._pointer},
+            _size {other._size} {
+        other._pointer = nullptr;
+    }
+
+    FileMapping::~FileMapping() noexcept {
+        if(_pointer != nullptr) {
+            ::munmap(_pointer, _size);
+            _pointer = nullptr;
+        }
+    }
+
+    auto FileMapping::operator=(chronos::platform::FileMapping&& other) noexcept -> FileMapping& {
+        _pointer = other._pointer;
+        _size = other._size;
+        other._pointer = nullptr;
+        return *this;
+    }
+
+    auto FileMapping::operator*() const noexcept -> const u8* {
+        return _pointer;
+    }
+
     File::File(std::filesystem::path file_path, FileFlags flags) ://NOLINT
-            _path {std::move(file_path)} {
+            _path {std::move(file_path)},
+            _flags {flags} {
         const auto exists = std::filesystem::exists(file_path);
 
         // Create parent directory if necessary
-        if(!exists && file_path.has_parent_path()) {
-            if(const auto parent_path = file_path.parent_path(); std::filesystem::exists(parent_path)) {
+        if(!exists && _path.has_parent_path()) {
+            if(const auto parent_path = _path.parent_path(); std::filesystem::exists(parent_path)) {
                 std::filesystem::create_directories(parent_path);
             }
         }
@@ -61,15 +93,16 @@ namespace chronos::platform {
         }
 
         // Create or open file
-        _file_handle = CHRONOS_OPEN(file_path.c_str(), file_flags, permissions);
+        _file_handle = ::open(_path.c_str(), file_flags, permissions);
         if(_file_handle == -1) {
             throw std::runtime_error {fmt::format("Unable to open file: {}", get_last_error())};
         }
     }
 
-    File::File(File&& other) noexcept {
-        _file_handle = other._file_handle;
-        _path = std::move(other._path);
+    File::File(File&& other) noexcept ://NOLINT
+            _file_handle {other._file_handle},
+            _path {std::move(other._path)},
+            _flags {other._flags} {
         other._file_handle = invalid_file_handle;
     }
 
@@ -78,6 +111,36 @@ namespace chronos::platform {
             ::close(_file_handle);
             _file_handle = invalid_file_handle;
         }
+    }
+
+    auto File::map_into_memory() const noexcept -> kstd::Result<FileMapping> {
+        const auto file_size = get_file_size();
+        if(file_size.is_error()) {
+            return kstd::Error {file_size.get_error()};
+        }
+
+        // Generate flags for memory mapping
+        int flags = 0;
+        if(are_flags_set<FileFlags, FileFlags::READ>(_flags)) {
+            flags |= PROT_READ;
+        }
+
+        if(are_flags_set<FileFlags, FileFlags::WRITE>(_flags)) {
+            flags |= PROT_WRITE;
+        }
+
+        if(are_flags_set<FileFlags, FileFlags::EXECUTE>(_flags)) {
+            flags |= PROT_EXEC;
+        }
+
+        // Pointer to mapped memory section
+        auto* memory_ptr = CHRONOS_MMAP(nullptr, *file_size, flags, MAP_SHARED, _file_handle, 0);
+        if(memory_ptr == MAP_FAILED) {
+            return kstd::Error {fmt::format("Unable to map file into memory: {}", get_last_error())};
+        }
+
+        // Return file mapping
+        return {{static_cast<u8*>(memory_ptr), file_size}};
     }
 
     auto File::get_file_size() const noexcept -> kstd::Result<usize> {
