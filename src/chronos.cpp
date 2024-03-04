@@ -28,6 +28,20 @@ auto split_string(const std::string& str, char delimiter) -> std::vector<std::st
     return views;
 }
 
+auto are_magic_bytes_valid(std::array<char, 4> magic_bytes) -> bool {
+#ifdef PLATFORM_WINDOWS
+    if (magic_bytes[0] != 'M' || magic_bytes[1] != 'Z') {
+        return false;
+    }
+
+    // TODO: Add PE Header validation
+    return true;
+#else
+    constexpr auto elf_magic_bytes = std::array<char, 4> { 0x7F, 'E', 'L', 'F' };
+    return elf_magic_bytes == magic_bytes;
+#endif
+}
+
 auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
     // clang-format off
     auto options = cxxopts::Options {"Chronos", "Multi-platform debugger"};
@@ -71,6 +85,30 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
                 goto end;
             }
 
+            // Open file and map file content into memory
+            const auto file = chronos::platform::File {executable_path, chronos::platform::FileFlags::READ};
+            const auto map_memory_result = file.map_into_memory();
+            if(map_memory_result.is_error()) {
+                SPDLOG_ERROR("Unable to map a file into memory: {}", map_memory_result.get_error());
+                goto end;
+            }
+
+            if(map_memory_result.get().get_size() < 4) {
+                SPDLOG_ERROR("Unable to a map file into memory: The file content is too tiny");
+                goto end;
+            }
+
+            // Read magic bytes
+            const auto mapped_memory_ptr = *map_memory_result.get();
+            std::array<char, 4> magic_bytes {};
+            std::copy(mapped_memory_ptr, mapped_memory_ptr + 4, magic_bytes.begin());
+            if (!are_magic_bytes_valid(magic_bytes)) {
+                SPDLOG_ERROR("Unable to change file: The provided file isn't a debuggable executable");
+                goto end;
+            }
+
+            // Finish
+            // TODO: Read debug symbols
             SPDLOG_INFO("Successfully changed file to '{}'", executable_path);
         }
         else {

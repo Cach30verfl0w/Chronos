@@ -26,14 +26,15 @@
 #include <kstd/defaults.hpp>
 #include <kstd/result.hpp>
 #include <stdexcept>
-#include <sys/mman.h>
 
 #if defined(PLATFORM_LINUX)
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #elif defined(PLATFORM_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #endif
 
@@ -49,11 +50,18 @@ namespace chronos::platform {
     KSTD_BITFLAGS(u8, FileFlags, READ = 0b001, WRITE = 0b010, EXECUTE = 0b100);
 
     class FileMapping final {
+#ifdef PLATFORM_WINDOWS
+        HANDLE _memory_map_handle;
+#endif
         u8* _pointer;
         usize _size;
 
         friend struct File;
+#ifdef PLATFORM_WINDOWS
+        FileMapping(u8* file_ptr, HANDLE memory_map_handle, usize size) noexcept;
+#else
         FileMapping(u8* file_ptr, usize size) noexcept;
+#endif
 
         public:
         FileMapping(FileMapping&& other) noexcept;
