@@ -4,6 +4,17 @@ project(chronos VERSION 1.0.0)
 include(FetchContent)
 add_compile_definitions(CHRONOS_VERSION="${CMAKE_PROJECT_VERSION}")
 
+# Default C++ and C standard
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+    message(STATUS "No C++ version specified, defaulting to C++20")
+    set(CMAKE_CXX_STANDARD 20)
+endif()
+
+if(NOT DEFINED CMAKE_C_STANDARD)
+    message(STATUS "No C version specified, defaulting to C17")
+    set(CMAKE_C_STANDARD 17)
+endif()
+
 # Detect compiler
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(COMPILER_CLANG TRUE)
