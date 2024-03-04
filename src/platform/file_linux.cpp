@@ -40,10 +40,11 @@ namespace chronos::platform {
         // Create flags and file permissions
         int file_flags = O_CREAT;
         int permissions = 0;
-        if (are_flags_set<FileFlags, FileFlags::WRITE, FileFlags::READ>(flags)) {
+        if(are_flags_set<FileFlags, FileFlags::WRITE, FileFlags::READ>(flags)) {
             permissions |= S_IRUSR | S_IRGRP | S_IROTH | S_IWUSR | S_IWGRP | S_IWOTH;
             file_flags |= O_RDWR;
-        } else {
+        }
+        else {
             if(are_flags_set<FileFlags, FileFlags::READ>(flags)) {
                 permissions |= S_IWUSR | S_IWGRP | S_IWOTH;
                 file_flags |= O_RDONLY;

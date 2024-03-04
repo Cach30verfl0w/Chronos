@@ -18,12 +18,12 @@
 namespace chronos::debug {
     ChronosDebugger::ChronosDebugger(const std::string& executable_path, std::vector<std::string>& arguments) {
         const auto subprocess = ::fork();
-        if (subprocess == 0) {
+        if(subprocess == 0) {
             // Disable ASLR
             ::personality(ADDR_NO_RANDOMIZE);
 
             // Tell kernel that this process can be traced by the parent process
-            if (::ptrace(PT_TRACE_ME, 0, nullptr, nullptr) < 0) {
+            if(::ptrace(PT_TRACE_ME, 0, nullptr, nullptr) < 0) {
                 throw std::runtime_error {fmt::format("Unable to debug '{}': {}", executable_path, strerror(errno))};
             }
 

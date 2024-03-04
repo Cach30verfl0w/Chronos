@@ -1,10 +1,10 @@
 #include "chronos/utils.hpp"
 #include <cxxopts.hpp>
+#include <filesystem>
 #include <iostream>
 #include <kstd/libc.hpp>
 #include <spdlog/spdlog.h>
 #include <sstream>
-#include <filesystem>
 
 #ifdef BUILD_DEBUG
 #define VERBOSE_LEVEL spdlog::level::trace
@@ -65,7 +65,7 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
             }
 
             const auto executable_path = arguments.at(0);
-            if (!std::filesystem::exists(executable_path) || !std::filesystem::is_regular_file(executable_path)) {
+            if(!std::filesystem::exists(executable_path) || !std::filesystem::is_regular_file(executable_path)) {
                 SPDLOG_ERROR("File '{}' isn't a file or doesn't exists", executable_path);
                 goto end;
             }

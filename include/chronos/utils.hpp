@@ -41,7 +41,7 @@ namespace chronos {
     static_assert(sizeof(i16) == 2);
     static_assert(sizeof(i32) == 4);
     static_assert(sizeof(i64) == 8);// NOLINT
-    static_assert(sizeof(isize) == sizeof(void *));
+    static_assert(sizeof(isize) == sizeof(void*));
 
     // NOLINTBEGIN
     using u8 = std::uint8_t;
@@ -55,7 +55,7 @@ namespace chronos {
     static_assert(sizeof(u16) == 2);
     static_assert(sizeof(u32) == 4);
     static_assert(sizeof(u64) == 8);// NOLINT
-    static_assert(sizeof(usize) == sizeof(void *));
+    static_assert(sizeof(usize) == sizeof(void*));
 
     // NOLINTBEGIN
     using f32 = float;
