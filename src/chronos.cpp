@@ -57,7 +57,7 @@ auto open_file(const std::filesystem::path& file_path) noexcept -> kstd::Result<
         return kstd::Error {fmt::format("Unable to map a file into memory: {}", map_memory_result.get_error())};
     }
 
-    if(map_memory_result.get().get_size() < 4) {
+    if(map_memory_result->get_size() < 4) {
         return kstd::Error {"Unable to a map file into memory: The file content is too tiny"s};
     }
 
