@@ -25,8 +25,7 @@
 namespace chronos {
     template<typename T, T... FLAGS>
     constexpr auto are_flags_set(const T value) noexcept -> bool {
-        constexpr auto flags = (FLAGS | ...);
-        return (value & flags) == flags;
+        return (value & (FLAGS | ...)) != 0;
     }
 
     // NOLINTBEGIN

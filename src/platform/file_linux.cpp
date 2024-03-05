@@ -93,7 +93,7 @@ namespace chronos::platform {
         }
 
         // Create or open file
-        _file_handle = ::open(_path.c_str(), file_flags, permissions);
+        _file_handle = CHRONOS_OPEN(_path.c_str(), file_flags, permissions);
         if(_file_handle == -1) {
             throw std::runtime_error {fmt::format("Unable to open file: {}", get_last_error())};
         }
@@ -140,15 +140,19 @@ namespace chronos::platform {
         }
 
         // Return file mapping
-        return {{static_cast<u8*>(memory_ptr), file_size}};
+        return {{static_cast<u8*>(memory_ptr), *file_size}};
     }
 
     auto File::get_file_size() const noexcept -> kstd::Result<usize> {
-        CHRONOS_STAT stat_buf {};
-        if(CHRONOS_FSTAT(_file_handle, &stat_buf) == -1) {
-            return kstd::Error {fmt::format("Unable to get size of file: {}", get_last_error())};
+        const auto temp_file_handle = ::fdopen(_file_handle, "r");
+        if(temp_file_handle == nullptr) {
+            return kstd::Error {fmt::format("Unable to acquire size of file: {}", get_last_error())};
         }
-        return stat_buf.st_size;
+
+        fseek(temp_file_handle, EOF, SEEK_END);
+        const auto position = ftell(temp_file_handle);
+        fclose(temp_file_handle);
+        return position;
     }
 
     auto File::operator=(File&& other) noexcept -> File& {
