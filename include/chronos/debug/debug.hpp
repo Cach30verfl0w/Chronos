@@ -19,8 +19,11 @@
 
 #pragma once
 #include "chronos/utils.hpp"
+#include <filesystem>
 #include <fmt/format.h>
 #include <kstd/defaults.hpp>
+#include <kstd/option.hpp>
+#include <kstd/result.hpp>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -38,11 +41,18 @@ namespace chronos::debug {
 #endif
 
     class ChronosDebugger final {
-        ProcessId _process_id;
+        kstd::Option<ProcessId> _running_process_id;
 
         public:
-        ChronosDebugger(const std::string& executable_path, std::vector<std::string>& arguments);
-        ~ChronosDebugger() noexcept;
+        ChronosDebugger() noexcept = default;
+        ~ChronosDebugger() noexcept = default;
         KSTD_DEFAULT_MOVE_COPY(ChronosDebugger, ChronosDebugger);
+
+        [[nodiscard]] auto run(const std::filesystem::path& file, const std::vector<std::string>& args) noexcept
+                -> kstd::Result<void>;
+
+        [[nodiscard]] inline auto is_running() const noexcept -> bool {
+            return _running_process_id.has_value();
+        }
     };
 }// namespace chronos::debug

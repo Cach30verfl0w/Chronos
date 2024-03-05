@@ -16,13 +16,9 @@
 #include "chronos/platform/file.hpp"
 
 #ifdef CPU_64_BIT
-#define CHRONOS_STAT struct ::stat64
-#define CHRONOS_FSTAT ::fstat64
 #define CHRONOS_OPEN ::open64
 #define CHRONOS_MMAP ::mmap64
 #else
-#define CHRONOS_STAT struct ::stat
-#define CHRONOS_FSTAT ::fstat
 #define CHRONOS_OPEN ::open
 #define CHRONOS_MMAP ::mmap
 #endif
@@ -151,7 +147,7 @@ namespace chronos::platform {
 
         fseek(temp_file_handle, EOF, SEEK_END);
         const auto position = ftell(temp_file_handle);
-        fclose(temp_file_handle);
+        //fclose(temp_file_handle);
         return position;
     }
 

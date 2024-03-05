@@ -1,4 +1,5 @@
 #include "chronos/platform/file.hpp"
+#include "chronos/debug/debug.hpp"
 #include <cxxopts.hpp>
 #include <filesystem>
 #include <iostream>
@@ -52,9 +53,13 @@ auto open_file(const std::filesystem::path& file_path) noexcept -> kstd::Result<
     }
 
     auto file_result = kstd::try_construct<chronos::platform::File>(file_path, chronos::platform::FileFlags::READ);
+    if (file_result.is_error()) {
+        return kstd::Error {fmt::format("Unable to openfile: {}", file_result.get_error())};
+    }
+
     const auto map_memory_result = file_result->map_into_memory();
     if(map_memory_result.is_error()) {
-        return kstd::Error {fmt::format("Unable to map a file into memory: {}", map_memory_result.get_error())};
+        return kstd::Error {fmt::format("{}", map_memory_result.get_error())};
     }
 
     if(map_memory_result->get_size() < 4) {
@@ -94,7 +99,7 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
         return EXIT_SUCCESS;
     }
 
-    // Variables
+    // Set current file path when argument was set
     // clang-format off
     kstd::Option<std::filesystem::path> current_file_path =
             result.count("file") > 0 ? kstd::Option {result["file"].as<std::string>()}.map([](auto value) {
@@ -107,6 +112,9 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
             return EXIT_FAILURE;
         }
     }
+
+    // Create debugger instance
+    auto debugger = chronos::debug::ChronosDebugger {};
 
     // Command Prompt
     std::string line;
@@ -136,6 +144,11 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
             }
 
             SPDLOG_INFO("Starting debugger...");
+            const auto args = std::vector<std::string> {};
+            if (const auto run_result = debugger.run(current_file_path.get(), args); run_result.is_error()) {
+                SPDLOG_ERROR("{}", run_result.get_error());
+                goto end;
+            }
         }
         else if(std::equal(command.cbegin(), command.cend(), "file")) {
             if(arguments.size() != 1) {
