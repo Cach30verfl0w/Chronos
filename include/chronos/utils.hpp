@@ -25,7 +25,7 @@
 namespace chronos {
     template<typename T, T... FLAGS>
     constexpr auto are_flags_set(const T value) noexcept -> bool {
-        return (value & (FLAGS | ...)) != 0;
+        return (value & (FLAGS | ...)) != T::NONE;
     }
 
     // NOLINTBEGIN
