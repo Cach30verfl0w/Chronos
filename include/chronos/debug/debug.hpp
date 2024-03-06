@@ -81,9 +81,10 @@ namespace chronos::debug {
         [[nodiscard]] auto run(const std::filesystem::path& file, const std::vector<std::string>& args) noexcept
                 -> kstd::Result<void>;
         [[nodiscard]] auto continue_execution() const noexcept -> kstd::Result<void>;
-
         [[nodiscard]] auto add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
         [[nodiscard]] auto remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
+
         [[nodiscard]] auto get_breakpoints() const noexcept -> const std::unordered_map<std::intptr_t, Breakpoint>&;
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {

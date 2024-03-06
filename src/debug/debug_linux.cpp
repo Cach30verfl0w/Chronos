@@ -102,12 +102,14 @@ namespace chronos::debug {
             return kstd::Error {"Unable to continue execution: No process is running"s};
         }
 
-        if(::ptrace(PTRACE_CONT, _running_process_id, nullptr, nullptr) < 0) {
+        if(::ptrace(PTRACE_CONT, *_running_process_id, nullptr, nullptr) < 0) {
             return kstd::Error {fmt::format("Unable to continue execution: {}", platform::get_last_error())};
         }
 
-        int wait_status;
-        ::waitpid(_running_process_id, &wait_status, WNOHANG);
+        if (const auto wait_result = wait_for_signal(); wait_result.is_error()) {
+            return kstd::Error {wait_result.get_error()};
+        }
+
         return {};
     }
 
@@ -145,6 +147,34 @@ namespace chronos::debug {
             return kstd::Error {disable_result.get_error()};
         }
         _breakpoints.erase(address);
+        return {};
+    }
+
+    auto ChronosDebugger::wait_for_signal() const noexcept -> kstd::Result<void> {
+        // Wait for pause execution (to acquire signals like SIGSEGV)
+        int wait_status;
+        if (::waitpid(*_running_process_id, &wait_status, 0) < 0) {
+            return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
+        }
+
+        // Acquire info about signal
+        siginfo_t info;
+        if (::ptrace(PTRACE_GETSIGINFO, *_running_process_id, nullptr, &info) < 0) {
+            return kstd::Error {fmt::format("Unable to wait signal: {}", platform::get_last_error())};
+        }
+
+        switch (info.si_signo) {
+            case SIGTRAP:
+                // TODO: Handle different trap types
+                SPDLOG_INFO("Hit breakpoint"); // TODO: Print breakpoint address (source file etc. when available)
+                break;
+            case SIGSEGV:
+                SPDLOG_INFO("Got SIGSEGV signal. Reason: {}", info.si_code);
+                break;
+            default:
+                SPDLOG_INFO("Got signal {} by application", strsignal(info.si_signo));
+                break;
+        }
         return {};
     }
 
