@@ -150,6 +150,12 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
                 goto end;
             }
         }
+        else if(std::equal(command.cbegin(), command.cend(), "continue")) {
+            if (const auto continue_result = debugger.continue_execution(); continue_result.is_error()) {
+                SPDLOG_ERROR("{}", continue_result.get_error());
+                goto end;
+            }
+        }
         else if(std::equal(command.cbegin(), command.cend(), "file")) {
             if(arguments.size() != 1) {
                 SPDLOG_ERROR("Invalid usage, please use: file <path to file>");

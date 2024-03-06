@@ -18,12 +18,14 @@
  */
 
 #pragma once
+#include "chronos/platform/platform.hpp"
 #include "chronos/utils.hpp"
 #include <filesystem>
 #include <fmt/format.h>
 #include <kstd/defaults.hpp>
 #include <kstd/option.hpp>
 #include <kstd/result.hpp>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -40,6 +42,32 @@ namespace chronos::debug {
     using ProcessId = pid_t;
 #endif
 
+    class Breakpoint {
+        ProcessId _process_id;
+        std::intptr_t _address;
+        bool _enabled;
+        u8 _saved_data;
+
+        public:
+        Breakpoint(ProcessId process_id, std::intptr_t address) noexcept;
+        ~Breakpoint() noexcept = default;
+
+        auto enable() noexcept -> kstd::Result<void>;
+        auto disable() noexcept -> kstd::Result<void>;
+
+        inline auto get_process_id() const noexcept -> ProcessId {
+            return _process_id;
+        }
+
+        inline auto get_address() const noexcept -> std::intptr_t {
+            return _address;
+        }
+
+        inline auto is_enabled() const noexcept -> bool {
+            return _enabled;
+        }
+    };
+
     class ChronosDebugger final {
         kstd::Option<ProcessId> _running_process_id;
 
@@ -50,6 +78,10 @@ namespace chronos::debug {
 
         [[nodiscard]] auto run(const std::filesystem::path& file, const std::vector<std::string>& args) noexcept
                 -> kstd::Result<void>;
+
+        [[nodiscard]] auto add_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto remove_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto continue_execution() const noexcept -> kstd::Result<void>;
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _running_process_id.has_value();

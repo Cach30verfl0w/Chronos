@@ -16,6 +16,50 @@
 #include "chronos/debug/debug.hpp"
 
 namespace chronos::debug {
+    Breakpoint::Breakpoint(chronos::debug::ProcessId process_id, std::intptr_t address) noexcept ://NOLINT
+            _process_id {process_id},
+            _address {address},
+            _enabled {false},
+            _saved_data {} {
+    }
+
+    auto Breakpoint::enable() noexcept -> kstd::Result<void> {
+        // Read the data at the specified address and save instruction data
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
+        if (data < 0) {
+            return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
+        }
+        _saved_data = static_cast<u8>(data & 0xFF);
+
+        // Replace instruction at address with interrupt instruction
+        const u64 software_interrupt_instruction = 0xCC;
+        if (::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | software_interrupt_instruction) < 0) {
+            return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
+        }
+
+        // Set breakpoint enabled
+        _enabled = true;
+        return {};
+    }
+
+    auto Breakpoint::disable() noexcept -> kstd::Result<void> {
+        // Read the data at the specified address
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
+        if (data < 0) {
+            return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
+        }
+
+        // Remove interrupt instruction and insert restored data
+        if (::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | _saved_data) < 0) {
+            return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
+        }
+
+        // Set breakpoint disabled
+        _enabled = false;
+        return {};
+    }
+
+    // TODO: Add ability to select file and set breakpoint, then run it
     auto ChronosDebugger::run(const std::filesystem::path& file, const std::vector<std::string>& args) noexcept
             -> kstd::Result<void> {
         using namespace std::string_literals;
@@ -26,18 +70,18 @@ namespace chronos::debug {
         const auto child_process_id = ::fork();
         if(child_process_id == 0) {
             // Disable ASLR
-            //::personality(ADDR_NO_RANDOMIZE);
+            ::personality(ADDR_NO_RANDOMIZE);
 
             // Tell parent process that this process can be debugged
             if(::ptrace(PT_TRACE_ME, 0, nullptr, nullptr) < 0) {
-                // TODO: Print error
+                SPDLOG_ERROR("Unable to trace process: {}", platform::get_last_error());
                 exit(-1);
             }
 
             // Run process
             std::string arguments {};
             arguments.append(file);
-            for (const auto& arg : args) {
+            for(const auto& arg : args) {
                 arguments.append(" ");
                 arguments.append(arg);
             }
@@ -45,12 +89,31 @@ namespace chronos::debug {
             execl(file.c_str(), arguments.c_str(), nullptr);
         }
         _running_process_id = {child_process_id};
+        return {};
+    }
 
-        // TODO: Temporary
+    auto ChronosDebugger::add_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void> {
+        // TODO: Add breakpoint to debugee
+        return {};
+    }
+
+    auto ChronosDebugger::remove_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void> {
+        // TODO: Remove breakpoint from debugee
+        return {};
+    }
+
+    auto ChronosDebugger::continue_execution() const noexcept -> kstd::Result<void> {
+        using namespace std::string_literals;
+        if(!is_running()) {
+            return kstd::Error {"Unable to continue execution: No process is running"s};
+        }
+
+        if (::ptrace(PTRACE_CONT, _running_process_id, nullptr, nullptr) < 0) {
+            return kstd::Error {fmt::format("Unable to continue execution: {}", platform::get_last_error())};
+        }
+
         int wait_status;
-        ::waitpid(child_process_id, &wait_status, 0);
-        ::ptrace(PTRACE_CONT, child_process_id, nullptr, nullptr);
-        ::waitpid(child_process_id, &wait_status, 0);
+        ::waitpid(_running_process_id, &wait_status, WNOHANG);
         return {};
     }
 }// namespace chronos::debug
