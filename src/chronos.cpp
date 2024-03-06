@@ -165,6 +165,15 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
 
             SPDLOG_INFO("Set breakpoint at 0x{:X}", addr_value);
         }
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "unbreak")) {
+            const intptr_t addr_value = std::stol(std::string {args[1]}, nullptr, 16);
+            if(const auto unbreak_result = debugger.remove_breakpoint(addr_value); unbreak_result.is_error()) {
+                SPDLOG_ERROR("{}", unbreak_result.get_error());
+                goto end;
+            }
+
+            SPDLOG_INFO("Removed breakpoint from 0x{:X}", addr_value);
+        }
         else if(std::equal(command_name.cbegin(), command_name.cend(), "file")) {
             if(args.size() != 2) {
                 SPDLOG_ERROR("Invalid usage, please use: file <path to file>");

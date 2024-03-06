@@ -45,8 +45,10 @@ namespace chronos::debug {
 
     auto Breakpoint::disable() noexcept -> kstd::Result<void> {
         // Read the data at the specified address
+
+        errno = 0;
         const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
-        if(data < 0) {
+        if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
