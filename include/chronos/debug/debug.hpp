@@ -84,6 +84,7 @@ namespace chronos::debug {
 
         [[nodiscard]] auto add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
         [[nodiscard]] auto remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto get_breakpoints() const noexcept -> const std::unordered_map<std::intptr_t, Breakpoint>&;
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _running_process_id.has_value();

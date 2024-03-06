@@ -163,7 +163,11 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
                 goto end;
             }
 
-            SPDLOG_INFO("Set breakpoint at 0x{:X}", addr_value);
+#ifdef CPU_64_BIT
+            SPDLOG_INFO("Set breakpoint at 0x{:016X}", addr_value);
+#else
+            SPDLOG_INFO("Set breakpoint at 0x{:08X}", addr_value);
+#endif
         }
         else if(std::equal(command_name.cbegin(), command_name.cend(), "unbreak")) {
             const intptr_t addr_value = std::stol(std::string {args[1]}, nullptr, 16);
@@ -172,7 +176,30 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
                 goto end;
             }
 
-            SPDLOG_INFO("Removed breakpoint from 0x{:X}", addr_value);
+#ifdef CPU_64_BIT
+            SPDLOG_INFO("Removed breakpoint from 0x{:016X}", addr_value);
+#else
+            SPDLOG_INFO("Removed breakpoint from 0x{:08X}", addr_value);
+#endif
+        }
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "breakpoints")) {
+            const auto& breakpoints = debugger.get_breakpoints();
+            if (breakpoints.empty()) {
+                SPDLOG_INFO("No breakpoints are set");
+                goto end;
+            }
+
+            SPDLOG_INFO("List of current breakpoints");
+            for (auto i = 0; i < breakpoints.size(); i++) {
+                auto current_value = breakpoints.begin();
+                std::advance(current_value, i);
+
+#ifdef CPU_64_BIT
+                SPDLOG_INFO("{}: 0x{:016X}", i, current_value->first);
+#else
+                SPDLOG_INFO("{}: 0x{:08X}", i, current_value->first);
+#endif
+            }
         }
         else if(std::equal(command_name.cbegin(), command_name.cend(), "file")) {
             if(args.size() != 2) {

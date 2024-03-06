@@ -148,5 +148,8 @@ namespace chronos::debug {
         return {};
     }
 
+    auto ChronosDebugger::get_breakpoints() const noexcept -> const std::unordered_map<std::intptr_t, Breakpoint>& {
+        return _breakpoints;
+    }
 }// namespace chronos::debug
 #endif
