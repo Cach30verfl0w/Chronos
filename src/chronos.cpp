@@ -1,5 +1,5 @@
-#include "chronos/platform/file.hpp"
 #include "chronos/debug/debug.hpp"
+#include "chronos/platform/file.hpp"
 #include <cxxopts.hpp>
 #include <filesystem>
 #include <iostream>
@@ -53,7 +53,7 @@ auto open_file(const std::filesystem::path& file_path) noexcept -> kstd::Result<
     }
 
     auto file_result = kstd::try_construct<chronos::platform::File>(file_path, chronos::platform::FileFlags::READ);
-    if (file_result.is_error()) {
+    if(file_result.is_error()) {
         return kstd::Error {fmt::format("Unable to openfile: {}", file_result.get_error())};
     }
 
@@ -122,18 +122,18 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
     while(std::getline(std::cin, line)) {
         std::string command;
         std::istringstream(line) >> command;
-        auto arguments = split_string(line, ' ');
-        arguments.erase(arguments.cbegin());
+        auto args = split_string(line, ' ');
 
         // TODO: Commands: continue, breakpoint [address, name+index (Address)], read registers,
         //  read stack/memory, read function assembly (C code?)
 
         // Handle commands
-        if(std::equal(command.cbegin(), command.cend(), "quit")) {
+        const auto command_name = args[0];
+        if(std::equal(command_name.cbegin(), command_name.cend(), "quit")) {
             break;
         }
-        else if(std::equal(command.cbegin(), command.cend(), "run")) {
-            if(!arguments.empty()) {
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "run")) {
+            if(args.size() != 1) {
                 SPDLOG_ERROR("Invalid usage, please use: run");
                 goto end;
             }
@@ -144,25 +144,34 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
             }
 
             SPDLOG_INFO("Starting debugger...");
-            const auto args = std::vector<std::string> {};
-            if (const auto run_result = debugger.run(current_file_path.get(), args); run_result.is_error()) {
+            const auto a = std::vector<std::string> {};
+            if(const auto run_result = debugger.run(current_file_path.get(), a); run_result.is_error()) {
                 SPDLOG_ERROR("{}", run_result.get_error());
                 goto end;
             }
         }
-        else if(std::equal(command.cbegin(), command.cend(), "continue")) {
-            if (const auto continue_result = debugger.continue_execution(); continue_result.is_error()) {
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "continue")) {
+            if(const auto continue_result = debugger.continue_execution(); continue_result.is_error()) {
                 SPDLOG_ERROR("{}", continue_result.get_error());
                 goto end;
             }
         }
-        else if(std::equal(command.cbegin(), command.cend(), "file")) {
-            if(arguments.size() != 1) {
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "break")) {
+            const intptr_t addr_value = std::stol(std::string {args[1]}, nullptr, 16);
+            if(const auto break_result = debugger.add_breakpoint(addr_value); break_result.is_error()) {
+                SPDLOG_ERROR("{}", break_result.get_error());
+                goto end;
+            }
+
+            SPDLOG_INFO("Set breakpoint at 0x{:X}", addr_value);
+        }
+        else if(std::equal(command_name.cbegin(), command_name.cend(), "file")) {
+            if(args.size() != 2) {
                 SPDLOG_ERROR("Invalid usage, please use: file <path to file>");
                 goto end;
             }
 
-            const auto executable_path = arguments.at(0);
+            const auto executable_path = args.at(1);
             if(!std::filesystem::exists(executable_path) || !std::filesystem::is_regular_file(executable_path)) {
                 SPDLOG_ERROR("File '{}' isn't a file or doesn't exists", executable_path);
                 goto end;

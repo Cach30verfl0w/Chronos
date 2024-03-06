@@ -28,6 +28,7 @@
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #ifdef PLATFORM_LINUX
@@ -69,6 +70,7 @@ namespace chronos::debug {
     };
 
     class ChronosDebugger final {
+        std::unordered_map<std::intptr_t, Breakpoint> _breakpoints;
         kstd::Option<ProcessId> _running_process_id;
 
         public:
@@ -78,10 +80,10 @@ namespace chronos::debug {
 
         [[nodiscard]] auto run(const std::filesystem::path& file, const std::vector<std::string>& args) noexcept
                 -> kstd::Result<void>;
-
-        [[nodiscard]] auto add_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void>;
-        [[nodiscard]] auto remove_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void>;
         [[nodiscard]] auto continue_execution() const noexcept -> kstd::Result<void>;
+
+        [[nodiscard]] auto add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _running_process_id.has_value();

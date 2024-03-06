@@ -25,15 +25,16 @@ namespace chronos::debug {
 
     auto Breakpoint::enable() noexcept -> kstd::Result<void> {
         // Read the data at the specified address and save instruction data
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
-        if (data < 0) {
+        errno = 0;
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr); // TODO: Fail
+        if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
         _saved_data = static_cast<u8>(data & 0xFF);
 
         // Replace instruction at address with interrupt instruction
         const u64 software_interrupt_instruction = 0xCC;
-        if (::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | software_interrupt_instruction) < 0) {
+        if(::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | software_interrupt_instruction) < 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
 
@@ -45,12 +46,12 @@ namespace chronos::debug {
     auto Breakpoint::disable() noexcept -> kstd::Result<void> {
         // Read the data at the specified address
         const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
-        if (data < 0) {
+        if(data < 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
         // Remove interrupt instruction and insert restored data
-        if (::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | _saved_data) < 0) {
+        if(::ptrace(PTRACE_POKEDATA, _process_id, _address, (data & ~0xFF) | _saved_data) < 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
@@ -87,18 +88,9 @@ namespace chronos::debug {
             }
 
             execl(file.c_str(), arguments.c_str(), nullptr);
+        } else {
+            _running_process_id = {child_process_id};
         }
-        _running_process_id = {child_process_id};
-        return {};
-    }
-
-    auto ChronosDebugger::add_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void> {
-        // TODO: Add breakpoint to debugee
-        return {};
-    }
-
-    auto ChronosDebugger::remove_breakpoint(std::intptr_t address) const noexcept -> kstd::Result<void> {
-        // TODO: Remove breakpoint from debugee
         return {};
     }
 
@@ -108,7 +100,7 @@ namespace chronos::debug {
             return kstd::Error {"Unable to continue execution: No process is running"s};
         }
 
-        if (::ptrace(PTRACE_CONT, _running_process_id, nullptr, nullptr) < 0) {
+        if(::ptrace(PTRACE_CONT, _running_process_id, nullptr, nullptr) < 0) {
             return kstd::Error {fmt::format("Unable to continue execution: {}", platform::get_last_error())};
         }
 
@@ -116,5 +108,43 @@ namespace chronos::debug {
         ::waitpid(_running_process_id, &wait_status, WNOHANG);
         return {};
     }
+
+    auto ChronosDebugger::add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
+        using namespace std::string_literals;
+        if(!is_running()) {
+            return kstd::Error {"Unable to continue execution: No process is running"s};
+        }
+
+        if(_breakpoints.contains(address)) {
+            return kstd::Error {"Unable to set breakpoint: Breakpoint is already set"s};
+        }
+
+        // Create and set breakpoint
+        Breakpoint breakpoint {*_running_process_id, address};
+        if (const auto enable_result = breakpoint.enable(); enable_result.is_error()) {
+            return kstd::Error {enable_result.get_error()};
+        }
+        _breakpoints.insert(std::make_pair(address, breakpoint));
+        return {};
+    }
+
+    auto ChronosDebugger::remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
+        using namespace std::string_literals;
+        if(!is_running()) {
+            return kstd::Error {"Unable to continue execution: No process is running"s};
+        }
+
+        const auto breakpoint = _breakpoints.find(address);
+        if(breakpoint == _breakpoints.cend()) {
+            return kstd::Error {"Unable to set breakpoint: Breakpoint is not set"s};
+        }
+
+        if (const auto disable_result = breakpoint->second.disable(); disable_result.is_error()) {
+            return kstd::Error {disable_result.get_error()};
+        }
+        _breakpoints.erase(address);
+        return {};
+    }
+
 }// namespace chronos::debug
 #endif
