@@ -12,6 +12,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+/**
+ * @author Cedric Hammes
+ * @since  03/03/2024
+ */
+
 #ifdef PLATFORM_LINUX
 #include "chronos/debug/debug.hpp"
 
@@ -26,7 +31,7 @@ namespace chronos::debug {
     auto Breakpoint::enable() noexcept -> kstd::Result<void> {
         // Read the data at the specified address and save instruction data
         errno = 0;
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr); // TODO: Fail
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_id, _address, nullptr);
         if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
@@ -90,13 +95,14 @@ namespace chronos::debug {
             }
 
             execl(file.c_str(), arguments.c_str(), nullptr);
-        } else {
+        }
+        else {
             _running_process_id = {child_process_id};
         }
         return {};
     }
 
-    auto ChronosDebugger::continue_execution() const noexcept -> kstd::Result<void> {
+    auto ChronosDebugger::continue_execution() noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
         if(!is_running()) {
             return kstd::Error {"Unable to continue execution: No process is running"s};
@@ -106,7 +112,7 @@ namespace chronos::debug {
             return kstd::Error {fmt::format("Unable to continue execution: {}", platform::get_last_error())};
         }
 
-        if (const auto wait_result = wait_for_signal(); wait_result.is_error()) {
+        if(const auto wait_result = wait_for_signal(); wait_result.is_error()) {
             return kstd::Error {wait_result.get_error()};
         }
 
@@ -125,7 +131,7 @@ namespace chronos::debug {
 
         // Create and set breakpoint
         Breakpoint breakpoint {*_running_process_id, address};
-        if (const auto enable_result = breakpoint.enable(); enable_result.is_error()) {
+        if(const auto enable_result = breakpoint.enable(); enable_result.is_error()) {
             return kstd::Error {enable_result.get_error()};
         }
         _breakpoints.insert(std::make_pair(address, breakpoint));
@@ -143,43 +149,35 @@ namespace chronos::debug {
             return kstd::Error {"Unable to set breakpoint: Breakpoint is not set"s};
         }
 
-        if (const auto disable_result = breakpoint->second.disable(); disable_result.is_error()) {
+        if(const auto disable_result = breakpoint->second.disable(); disable_result.is_error()) {
             return kstd::Error {disable_result.get_error()};
         }
         _breakpoints.erase(address);
         return {};
     }
 
-    auto ChronosDebugger::wait_for_signal() const noexcept -> kstd::Result<void> {
+    auto ChronosDebugger::wait_for_signal() noexcept -> kstd::Result<void> {
         // Wait for pause execution (to acquire signals like SIGSEGV)
         int wait_status;
-        if (::waitpid(*_running_process_id, &wait_status, 0) < 0) {
+        if(::waitpid(*_running_process_id, &wait_status, 0) < 0) {
             return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
         }
 
         // Acquire info about signal
         siginfo_t info;
-        if (::ptrace(PTRACE_GETSIGINFO, *_running_process_id, nullptr, &info) < 0) {
+        if(::ptrace(PTRACE_GETSIGINFO, *_running_process_id, nullptr, &info) < 0) {
             return kstd::Error {fmt::format("Unable to wait signal: {}", platform::get_last_error())};
         }
 
-        switch (info.si_signo) {
+        switch(info.si_signo) {
             case SIGTRAP:
                 // TODO: Handle different trap types
-                SPDLOG_INFO("Hit breakpoint"); // TODO: Print breakpoint address (source file etc. when available)
+                SPDLOG_INFO("Hit breakpoint");// TODO: Print breakpoint address (source file etc. when available)
                 break;
-            case SIGSEGV:
-                SPDLOG_INFO("Got SIGSEGV signal. Reason: {}", info.si_code);
-                break;
-            default:
-                SPDLOG_INFO("Got signal {} by application", strsignal(info.si_signo));
-                break;
+            case SIGSEGV: SPDLOG_INFO("Got SIGSEGV signal. Reason: {}", info.si_code); break;
+            default: SPDLOG_INFO("Got signal {} by application", strsignal(info.si_signo)); break;
         }
         return {};
-    }
-
-    auto ChronosDebugger::get_breakpoints() const noexcept -> const std::unordered_map<std::intptr_t, Breakpoint>& {
-        return _breakpoints;
     }
 }// namespace chronos::debug
 #endif
