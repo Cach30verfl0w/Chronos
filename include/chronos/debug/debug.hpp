@@ -56,15 +56,15 @@ namespace chronos::debug {
         auto enable() noexcept -> kstd::Result<void>;
         auto disable() noexcept -> kstd::Result<void>;
 
-        inline auto get_process_id() const noexcept -> ProcessId {
+        [[nodiscard]] inline auto get_process_id() const noexcept -> ProcessId {
             return _process_id;
         }
 
-        inline auto get_address() const noexcept -> std::intptr_t {
+        [[nodiscard]] inline auto get_address() const noexcept -> std::intptr_t {
             return _address;
         }
 
-        inline auto is_enabled() const noexcept -> bool {
+        [[nodiscard]] inline auto is_enabled() const noexcept -> bool {
             return _enabled;
         }
     };
@@ -84,9 +84,7 @@ namespace chronos::debug {
         [[nodiscard]] auto add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
         [[nodiscard]] auto remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
         [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
-
         [[nodiscard]] auto get_breakpoints() const noexcept -> const std::unordered_map<std::intptr_t, Breakpoint>&;
-
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _running_process_id.has_value();
         }

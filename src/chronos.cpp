@@ -124,6 +124,7 @@ auto main(chronos::i32 argc, char** argv) -> chronos::i32 {
         std::istringstream(line) >> command;
         auto args = split_string(line, ' ');
 
+        // TODO: Support for PIE
         // TODO: Commands: continue, breakpoint [address, name+index (Address)], read registers,
         //  read stack/memory, read function assembly (C code?)
 
