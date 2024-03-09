@@ -21,8 +21,31 @@
 #include "libdebug/signal.hpp"
 
 namespace libdebug {
+    /**
+     * This constructor constructs the signal by the platform-dependent signal info.
+     *
+     * @param signal_info The signal info from the signal
+     * @author            Cedric Hammes
+     * @since             09/03/2024
+     */
     Signal::Signal(libdebug::SignalInfo signal_info) noexcept :
             _signal_info {signal_info} {
+    }
+
+    /**
+     * This function checks whether the signal is a breakpoint. If yes, the return type is true, otherwise the
+     * return type is false.
+     *
+     * @return Whether the signal is a breakpoint
+     * @author Cedric Hammes
+     * @since  09/03/2024
+     */
+    auto Signal::is_breakpoint() const noexcept -> bool {
+        if (_signal_info.si_signo != SIGTRAP)
+            return false;
+
+        const auto sig_code = _signal_info.si_code;
+        return sig_code == TRAP_BRKPT || sig_code == TRAP_TRACE;
     }
 }// namespace libdebug
 #endif

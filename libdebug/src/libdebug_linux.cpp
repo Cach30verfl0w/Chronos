@@ -147,6 +147,9 @@ namespace libdebug {
         if(!is_process_running()) {
             return kstd::Error {"Unable to wait for signal: The process is not running"s};
         }
+        
+        // TODO: Jump before breakpoint, remove breakpoint and then resume execution when instruction counter is set
+        //  to some breakpoint
 
         if(::ptrace(PTRACE_CONT, _process_id, nullptr, nullptr) < 0) {
             return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
@@ -231,6 +234,7 @@ namespace libdebug {
             return kstd::Error {"Unable to wait for signal: No process is running"s};
         }
 
+        // Wait for signal and acquire info
         int wait_status;
         if(::waitpid(_process_id, &wait_status, 0) < 0) {
             return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
@@ -241,6 +245,7 @@ namespace libdebug {
             return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
         }
 
+        // Return signal built by info
         return {Signal {signal_info}};
     }
 

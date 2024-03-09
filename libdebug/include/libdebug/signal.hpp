@@ -62,5 +62,15 @@ namespace libdebug {
         [[nodiscard]] inline auto get_signal_info() const noexcept -> const SignalInfo& {
             return _signal_info;
         }
+
+        /**
+         * This function checks whether the signal is a breakpoint. If yes, the return type is true, otherwise the
+         * return type is false.
+         *
+         * @return Whether the signal is a breakpoint
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] auto is_breakpoint() const noexcept -> bool;
     };
 }// namespace libdebug
