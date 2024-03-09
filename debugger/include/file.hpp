@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#include "chronos/platform/platform.hpp"
-#include "chronos/utils.hpp"
+#include <libdebug/platform/platform.hpp>
+#include <libdebug/utils.hpp>
 #include <filesystem>
 #include <fmt/format.h>
 #include <kstd/bitflags.hpp>
@@ -39,6 +39,13 @@
 #endif
 
 namespace chronos::platform {
+    namespace {
+        template<typename T, T... FLAGS>
+        constexpr auto are_flags_set(const T value) noexcept -> bool {
+            return (value & (FLAGS | ...)) != T::NONE;
+        }
+    }
+
 #if defined(PLATFORM_LINUX)
     using FileHandle = int;
     static inline const FileHandle invalid_file_handle = -1;
@@ -47,20 +54,20 @@ namespace chronos::platform {
     static inline const FileHandle invalid_file_handle = INVALID_HANDLE_VALUE;
 #endif
 
-    KSTD_BITFLAGS(u8, FileFlags, READ = 0b001, WRITE = 0b010, EXECUTE = 0b100);
+    KSTD_BITFLAGS(libdebug::u8, FileFlags, READ = 0b001, WRITE = 0b010, EXECUTE = 0b100);
 
     class FileMapping final {
 #ifdef PLATFORM_WINDOWS
         HANDLE _memory_map_handle;
 #endif
-        u8* _pointer;
-        usize _size;
+        libdebug::u8* _pointer;
+        libdebug::usize _size;
 
         friend struct File;
 #ifdef PLATFORM_WINDOWS
         FileMapping(u8* file_ptr, HANDLE memory_map_handle, usize size) noexcept;
 #else
-        FileMapping(u8* file_ptr, usize size) noexcept;
+        FileMapping(libdebug::u8* file_ptr, libdebug::usize size) noexcept;
 #endif
 
         public:
@@ -68,12 +75,12 @@ namespace chronos::platform {
         ~FileMapping() noexcept;
         KSTD_NO_COPY(FileMapping, FileMapping);
 
-        [[nodiscard]] inline auto get_size() const noexcept -> usize {
+        [[nodiscard]] inline auto get_size() const noexcept -> libdebug::usize {
             return _size;
         }
 
         auto operator=(FileMapping&& other) noexcept -> FileMapping&;
-        [[nodiscard]] auto operator*() const noexcept -> const u8*;
+        [[nodiscard]] auto operator*() const noexcept -> const libdebug::u8*;
     };
 
     class File final {
@@ -88,7 +95,7 @@ namespace chronos::platform {
         KSTD_NO_COPY(File, File);
 
         [[nodiscard]] auto map_into_memory() const noexcept -> kstd::Result<FileMapping>;
-        [[nodiscard]] auto get_file_size() const noexcept -> kstd::Result<usize>;
+        [[nodiscard]] auto get_file_size() const noexcept -> kstd::Result<libdebug::usize>;
 
         auto operator=(File&& other) noexcept -> File&;
     };

@@ -13,7 +13,7 @@
 //  limitations under the License.
 
 #ifdef PLATFORM_LINUX
-#include "chronos/platform/file.hpp"
+#include "file.hpp"
 
 #ifdef CPU_64_BIT
 #define CHRONOS_OPEN ::open64
@@ -24,7 +24,8 @@
 #endif
 
 namespace chronos::platform {
-    FileMapping::FileMapping(u8* file_ptr, usize size) noexcept ://NOLINT
+
+    FileMapping::FileMapping(libdebug::u8* file_ptr, libdebug::usize size) noexcept ://NOLINT
             _pointer {file_ptr},
             _size {size} {
     }
@@ -49,7 +50,7 @@ namespace chronos::platform {
         return *this;
     }
 
-    auto FileMapping::operator*() const noexcept -> const u8* {
+    auto FileMapping::operator*() const noexcept -> const libdebug::u8* {
         return _pointer;
     }
 
@@ -91,7 +92,7 @@ namespace chronos::platform {
         // Create or open file
         _file_handle = CHRONOS_OPEN(_path.c_str(), file_flags, permissions);
         if(_file_handle == -1) {
-            throw std::runtime_error {fmt::format("Unable to open file: {}", get_last_error())};
+            throw std::runtime_error {fmt::format("Unable to open file: {}", libdebug::platform::get_last_error())};
         }
     }
 
@@ -132,17 +133,19 @@ namespace chronos::platform {
         // Pointer to mapped memory section
         auto* memory_ptr = CHRONOS_MMAP(nullptr, *file_size, flags, MAP_SHARED, _file_handle, 0);
         if(memory_ptr == MAP_FAILED) {
-            return kstd::Error {fmt::format("Unable to map file into memory: {}", get_last_error())};
+            return kstd::Error {
+                    fmt::format("Unable to map file into memory: {}", libdebug::platform::get_last_error())};
         }
 
         // Return file mapping
-        return {{static_cast<u8*>(memory_ptr), *file_size}};
+        return {{static_cast<libdebug::u8*>(memory_ptr), *file_size}};
     }
 
-    auto File::get_file_size() const noexcept -> kstd::Result<usize> {
+    auto File::get_file_size() const noexcept -> kstd::Result<libdebug::usize> {
         const auto temp_file_handle = ::fdopen(_file_handle, "r");
         if(temp_file_handle == nullptr) {
-            return kstd::Error {fmt::format("Unable to acquire size of file: {}", get_last_error())};
+            return kstd::Error {
+                    fmt::format("Unable to acquire size of file: {}", libdebug::platform::get_last_error())};
         }
 
         fseek(temp_file_handle, EOF, SEEK_END);
