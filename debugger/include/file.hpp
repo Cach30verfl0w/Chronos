@@ -18,13 +18,13 @@
  */
 
 #pragma once
-#include <libdebug/platform/platform.hpp>
-#include <libdebug/utils.hpp>
 #include <filesystem>
 #include <fmt/format.h>
 #include <kstd/bitflags.hpp>
 #include <kstd/defaults.hpp>
 #include <kstd/result.hpp>
+#include <libdebug/platform/platform.hpp>
+#include <libdebug/utils.hpp>
 #include <stdexcept>
 
 #if defined(PLATFORM_LINUX)
@@ -44,7 +44,7 @@ namespace chronos::platform {
         constexpr auto are_flags_set(const T value) noexcept -> bool {
             return (value & (FLAGS | ...)) != T::NONE;
         }
-    }
+    }// namespace
 
 #if defined(PLATFORM_LINUX)
     using FileHandle = int;

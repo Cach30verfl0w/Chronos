@@ -41,7 +41,7 @@ namespace libdebug {
      * @since  09/03/2024
      */
     auto Signal::is_breakpoint() const noexcept -> bool {
-        if (_signal_info.si_signo != SIGTRAP)
+        if(_signal_info.si_signo != SIGTRAP)
             return false;
 
         const auto sig_code = _signal_info.si_code;
