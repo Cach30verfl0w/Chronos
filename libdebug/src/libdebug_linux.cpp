@@ -45,9 +45,11 @@ namespace libdebug {
      */
     auto Breakpoint::enable() noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(!_debug_context->is_process_running()) {
-            return kstd::Error {"Unable to enable breakpoint: No process is running"s};
+        if(_enabled || !_debug_context->is_process_running()) {
+            return kstd::Error {"Unable to enable breakpoint: No process is running and breakpoint is not enabled"s};
         }
+
+        // TODO: Check if specified address is instruction
 
         // Read the data at the specified address and save instruction data
         errno = 0;
@@ -80,8 +82,8 @@ namespace libdebug {
      */
     auto Breakpoint::disable() noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(!_debug_context->is_process_running()) {
-            return kstd::Error {"Unable to disable breakpoint: No process is running"s};
+        if(!_enabled || !_debug_context->is_process_running()) {
+            return kstd::Error {"Unable to disable breakpoint: No process is running or not enabled"s};
         }
 
         // Read the data at the specified address
