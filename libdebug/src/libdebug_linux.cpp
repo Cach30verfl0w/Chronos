@@ -123,7 +123,7 @@ namespace libdebug {
             std::ostringstream joined_args {};
             joined_args << executable;
             std::copy(arguments.cbegin(), arguments.cend(), std::ostream_iterator<std::string>(joined_args, " "));
-            ::printf("%s\n", joined_args.str().c_str());
+            ::printf("%s\n", joined_args.str().c_str()); // TODO: Remove
             ::execl(executable.c_str(), joined_args.str().c_str(), nullptr);
         }
         else if(child_process_id > 0) {
