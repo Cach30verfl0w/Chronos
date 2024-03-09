@@ -142,7 +142,7 @@ namespace libdebug {
      * @author             Cedric Hammes
      * @since              09/03/2024
      */
-    auto DebugContext::continue_execution(bool await_signal) noexcept -> kstd::Result<kstd::Option<Signal>> {
+    auto DebugContext::continue_execution(bool await_signal) const noexcept -> kstd::Result<kstd::Option<Signal>> {
         using namespace std::string_literals;
         if(!is_process_running()) {
             return kstd::Error {"Unable to wait for signal: The process is not running"s};

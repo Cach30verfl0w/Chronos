@@ -22,6 +22,7 @@
 #include "libdebug/signal.hpp"
 #include "libdebug/utils.hpp"
 #include <filesystem>
+#include <kstd/defaults.hpp>
 #include <kstd/option.hpp>
 #include <kstd/result.hpp>
 
@@ -72,6 +73,8 @@ namespace libdebug {
          * @since  09/03/2024
          */
         Breakpoint(const DebugContext* debug_context, std::intptr_t target_address) noexcept;
+        ~Breakpoint() noexcept = default;
+        KSTD_DEFAULT_MOVE_COPY(Breakpoint, Breakpoint);
 
         /**
          * This function enables the breakpoint by replacing the instruction at the specified address and saving the
@@ -100,7 +103,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        inline auto get_address() const noexcept -> std::intptr_t {
+        [[nodiscard]] inline auto get_address() const noexcept -> std::intptr_t {
             return _address;
         }
 
@@ -111,7 +114,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        inline auto is_enabled() const noexcept -> bool {
+        [[nodiscard]] inline auto is_enabled() const noexcept -> bool {
             return _enabled;
         }
     };
@@ -138,6 +141,9 @@ namespace libdebug {
          * @since            09/03/2024
          */
         DebugContext(const std::filesystem::path& executable, const std::vector<std::string>& arguments);
+        ~DebugContext() noexcept = default;
+        KSTD_DEFAULT_MOVE(DebugContext, DebugContext);
+        KSTD_NO_COPY(DebugContext, DebugContext);
 
         /**
          * This function continues the execution of the program when the program is running.
@@ -147,7 +153,7 @@ namespace libdebug {
          * @author             Cedric Hammes
          * @since              09/03/2024
          */
-        [[nodiscard]] auto continue_execution(bool await_signal) noexcept -> kstd::Result<kstd::Option<Signal>>;
+        [[nodiscard]] auto continue_execution(bool await_signal) const noexcept -> kstd::Result<kstd::Option<Signal>>;
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before
