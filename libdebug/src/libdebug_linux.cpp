@@ -248,7 +248,7 @@ namespace libdebug {
      * This function checks whether the process bound with the debug context is still running or has been
      * terminated.
      *
-     * @return Weather the process is still running
+     * @return Whether the process is still running
      * @author Cedric Hammes
      * @since  09/03/2024
      */
