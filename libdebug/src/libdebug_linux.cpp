@@ -147,7 +147,7 @@ namespace libdebug {
         if(!is_process_running()) {
             return kstd::Error {"Unable to wait for signal: The process is not running"s};
         }
-        
+
         // TODO: Jump before breakpoint, remove breakpoint and then resume execution when instruction counter is set
         //  to some breakpoint
 
