@@ -63,6 +63,8 @@ namespace libdebug::platform {
         __cpuid(eax, eax, ebx, ecx, edx);
         return (edx & 0b1) == 0b1;
 #endif
+#else
+        return true;
 #endif
     }
 }// namespace libdebug::platform
