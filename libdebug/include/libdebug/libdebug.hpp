@@ -26,6 +26,10 @@
 #include <kstd/option.hpp>
 #include <kstd/result.hpp>
 
+#ifdef LIBDEBUG_CAPSTONE
+#include <capstone/capstone.h>
+#endif
+
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -43,6 +47,28 @@ namespace libdebug {
     using ProcessId = DWORD;
 #endif
 
+#ifdef LIBDEBUG_CAPSTONE
+#if defined(ARCH_X86_64)
+#ifdef CPU_64_BIT
+    constexpr auto target_cs_mode = CS_MODE_64;
+#else
+    constexpr auto target_cs_mode = CS_MODE_32;
+#endif
+#elif defined(ARCH_ARM)
+#ifdef CPU_64_BIT
+    constexpr auto target_cs_mode = CS_MODE_ARM;
+#else
+    constexpr auto target_cs_mode = CS_MODE_ARM;
+#endif
+#elif defined(ARCH_RISCV)
+#ifdef CPU_64_BIT
+    constexpr auto target_cs_mode = CS_MODE_RISCV64;
+#else
+    constexpr auto target_cs_mode = CS_MODE_RISCV32;
+#endif
+#endif
+#endif
+    
     /**
      * This class is representing a single process being debugged by this application. This context can be initialized
      * by starting a subprocess that is being debugged or attach to an existing process.
@@ -59,7 +85,7 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    class Breakpoint {
+    class Breakpoint final {
         const DebugContext* _debug_context;
         std::intptr_t _address;
         bool _enabled;
@@ -126,7 +152,7 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    class DebugContext {
+    class DebugContext final {
         std::unordered_map<std::intptr_t, Breakpoint> _breakpoints;
         ProcessId _process_id;
 

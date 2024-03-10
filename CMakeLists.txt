@@ -3,6 +3,7 @@ project(chronos VERSION 1.0.0)
 
 # Include CMake Modules
 include(FetchContent)
+include(TestBigEndian)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake;")
 include(detect)
 include(${CMAKE_CURRENT_SOURCE_DIR}/libdebug/CMakeLists.txt)
