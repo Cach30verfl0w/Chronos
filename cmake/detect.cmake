@@ -15,10 +15,10 @@ endif ()
 test_big_endian(LIBDBG_BIG_ENDIAN)
 if (LIBDBG_BIG_ENDIAN)
     message(STATUS "Detected big endian")
-    add_compile_definitions(BIG_ENDIAN)
+    add_compile_definitions(LIBDBG_BIG_ENDIAN)
 else()
     message(STATUS "Detected little endian")
-    add_compile_definitions(LITTLE_ENDIAN)
+    add_compile_definitions(LIBDBG_LITTLE_ENDIAN)
 endif()
 
 # Detect architecture

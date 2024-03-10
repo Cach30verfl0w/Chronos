@@ -68,6 +68,12 @@ namespace libdebug {
 #endif
 #endif
 #endif
+
+#ifdef LIBDBG_BIG_ENDIAN
+    constexpr auto target_endian = CS_MODE_BIG_ENDIAN;
+#else
+    constexpr auto target_endian = CS_MODE_LITTLE_ENDIAN;
+#endif
     
     /**
      * This class is representing a single process being debugged by this application. This context can be initialized

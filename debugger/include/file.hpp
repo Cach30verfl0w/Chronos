@@ -65,7 +65,7 @@ namespace chronos::platform {
 
         friend struct File;
 #ifdef PLATFORM_WINDOWS
-        FileMapping(u8* file_ptr, HANDLE memory_map_handle, usize size) noexcept;
+        FileMapping(libdebug::u8* file_ptr, HANDLE memory_map_handle, libdebug::usize size) noexcept;
 #else
         FileMapping(libdebug::u8* file_ptr, libdebug::usize size) noexcept;
 #endif

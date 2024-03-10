@@ -16,7 +16,7 @@
 #include <kstd/utils.hpp>
 #include <utility>
 
-#include "chronos/platform/file.hpp"
+#include "file.hpp"
 
 namespace chronos::platform {
     FileMapping::FileMapping(libdebug::u8* file_ptr, HANDLE memory_map_handle, libdebug::usize size) noexcept ://NOLINT
@@ -156,16 +156,16 @@ namespace chronos::platform {
         const auto base_ptr = ::MapViewOfFile(file_mapping_handle, desired_access, 0, 0, 0);
         if(base_ptr == nullptr) {
             CloseHandle(file_mapping_handle);
-            return kstd::Error {fmt::format("{}", get_last_error())};
+            return kstd::Error {fmt::format("{}", libdebug::platform::get_last_error())};
         }
 
-        return {{static_cast<u8*>(base_ptr), file_mapping_handle, file_size}};
+        return {{static_cast<libdebug::u8*>(base_ptr), file_mapping_handle, file_size}};
     }
 
     auto File::get_file_size() const noexcept -> kstd::Result<libdebug::usize> {
         DWORD file_size = 0;
         if(::GetFileSize(_file_handle, &file_size) == INVALID_FILE_SIZE) {
-            return kstd::Error {fmt::format("Unable to get size of file: {}", get_last_error())};
+            return kstd::Error {fmt::format("Unable to get size of file: {}", libdebug::platform::get_last_error())};
         }
         return file_size;
     }

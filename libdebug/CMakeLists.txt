@@ -28,7 +28,7 @@ if (LIBDEBUG_ENABLE_CAPSTONE)
             GIT_SHALLOW true
             GIT_PROGRESS true
     )
-    FetchContent_Populate(capstone)
+    FetchContent_MakeAvailable(capstone)
 
     target_include_directories(debug PUBLIC "${CMAKE_BINARY_DIR}/_deps/capstone-src/include")
     target_link_libraries(debug PUBLIC capstone)

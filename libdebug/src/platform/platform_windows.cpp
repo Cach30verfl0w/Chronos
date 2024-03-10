@@ -21,7 +21,7 @@
 #include "libdebug/platform/platform.hpp"
 #include <kstd/utils.hpp>
 
-namespace chronos::platform {
+namespace libdebug::platform {
     /**
      * This method returns the last thrown error in this program. This is being used to print the error thrown by the
      * System API to the user.

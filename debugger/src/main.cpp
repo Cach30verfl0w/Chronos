@@ -20,6 +20,7 @@
 #include <iostream>
 #include <kstd/libc.hpp>
 #include <spdlog/spdlog.h>
+#include <libdebug/platform/platform.hpp>
 
 #ifdef PLATFORM_UNIX
 constexpr auto file_name = "chronos-debugger";
@@ -34,6 +35,7 @@ constexpr auto verbose_level = spdlog::level::debug;
 #endif
 
 auto main(int argc, char* argv[]) -> int {
+    kstd::libc::printf("%u\n", libdebug::platform::is_fpu_present());
     cxxopts::Options options {file_name};
     // clang-format off
     options.add_options("general")
@@ -57,6 +59,8 @@ auto main(int argc, char* argv[]) -> int {
         }
         return EXIT_SUCCESS;
     }
+
+    // TODO: Move file.hpp into libdebug
 
     std::fputs("(Chronos)> ", stdout);
     std::string command_line {};
