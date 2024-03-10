@@ -59,7 +59,7 @@ namespace libdebug {
         }
         _saved_data = static_cast<u8>(data & 0xFF);
 
-        // Replace instruction at address with interrupt instruction
+        // Replace instruction at address with interrupt instruction TODO: Different values for different architectures
         const u64 software_interrupt_instruction = 0xCC;
         if(::ptrace(PTRACE_POKEDATA, _debug_context->get_process_id(), _address,
                     (data & ~0xFF) | software_interrupt_instruction) < 0) {
