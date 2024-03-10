@@ -13,7 +13,7 @@
 //  limitations under the License.
 
 #ifdef PLATFORM_LINUX
-#include "file.hpp"
+#include "libdebug/platform/file.hpp"
 
 #ifdef CPU_64_BIT
 #define CHRONOS_OPEN ::open64
@@ -23,14 +23,14 @@
 #define CHRONOS_MMAP ::mmap
 #endif
 
-namespace chronos::platform {
+namespace libdebug::platform {
 
-    FileMapping::FileMapping(libdebug::u8* file_ptr, libdebug::usize size) noexcept ://NOLINT
+    FileMapping::FileMapping(u8* file_ptr, usize size) noexcept ://NOLINT
             _pointer {file_ptr},
             _size {size} {
     }
 
-    FileMapping::FileMapping(chronos::platform::FileMapping&& other) noexcept ://NOLINT
+    FileMapping::FileMapping(platform::FileMapping&& other) noexcept ://NOLINT
             _pointer {other._pointer},
             _size {other._size} {
         other._pointer = nullptr;
@@ -43,14 +43,14 @@ namespace chronos::platform {
         }
     }
 
-    auto FileMapping::operator=(chronos::platform::FileMapping&& other) noexcept -> FileMapping& {
+    auto FileMapping::operator=(platform::FileMapping&& other) noexcept -> FileMapping& {
         _pointer = other._pointer;
         _size = other._size;
         other._pointer = nullptr;
         return *this;
     }
 
-    auto FileMapping::operator*() const noexcept -> const libdebug::u8* {
+    auto FileMapping::operator*() const noexcept -> const u8* {
         return _pointer;
     }
 
@@ -92,7 +92,7 @@ namespace chronos::platform {
         // Create or open file
         _file_handle = CHRONOS_OPEN(_path.c_str(), file_flags, permissions);
         if(_file_handle == -1) {
-            throw std::runtime_error {fmt::format("Unable to open file: {}", libdebug::platform::get_last_error())};
+            throw std::runtime_error {fmt::format("Unable to open file: {}", platform::get_last_error())};
         }
     }
 
@@ -134,18 +134,18 @@ namespace chronos::platform {
         auto* memory_ptr = CHRONOS_MMAP(nullptr, *file_size, flags, MAP_SHARED, _file_handle, 0);
         if(memory_ptr == MAP_FAILED) {
             return kstd::Error {
-                    fmt::format("Unable to map file into memory: {}", libdebug::platform::get_last_error())};
+                    fmt::format("Unable to map file into memory: {}", platform::get_last_error())};
         }
 
         // Return file mapping
-        return {{static_cast<libdebug::u8*>(memory_ptr), *file_size}};
+        return {{static_cast<u8*>(memory_ptr), *file_size}};
     }
 
-    auto File::get_file_size() const noexcept -> kstd::Result<libdebug::usize> {
+    auto File::get_file_size() const noexcept -> kstd::Result<usize> {
         const auto temp_file_handle = ::fdopen(_file_handle, "r");
         if(temp_file_handle == nullptr) {
             return kstd::Error {
-                    fmt::format("Unable to acquire size of file: {}", libdebug::platform::get_last_error())};
+                    fmt::format("Unable to acquire size of file: {}", platform::get_last_error())};
         }
 
         fseek(temp_file_handle, EOF, SEEK_END);
@@ -160,5 +160,5 @@ namespace chronos::platform {
         other._file_handle = invalid_file_handle;
         return *this;
     }
-}// namespace chronos::platform
+}// namespace platform
 #endif

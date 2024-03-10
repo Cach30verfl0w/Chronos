@@ -18,14 +18,14 @@
 
 #include "file.hpp"
 
-namespace chronos::platform {
-    FileMapping::FileMapping(libdebug::u8* file_ptr, HANDLE memory_map_handle, libdebug::usize size) noexcept ://NOLINT
+namespace libdebug::platform {
+    FileMapping::FileMapping(u8* file_ptr, HANDLE memory_map_handle, usize size) noexcept ://NOLINT
             _pointer {file_ptr},
             _size {size},
             _memory_map_handle {memory_map_handle} {
     }
 
-    FileMapping::FileMapping(chronos::platform::FileMapping&& other) noexcept ://NOLINT
+    FileMapping::FileMapping(platform::FileMapping&& other) noexcept ://NOLINT
             _pointer {other._pointer},
             _size {other._size},
             _memory_map_handle {other._memory_map_handle} {
@@ -41,7 +41,7 @@ namespace chronos::platform {
         }
     }
 
-    auto FileMapping::operator=(chronos::platform::FileMapping&& other) noexcept -> FileMapping& {
+    auto FileMapping::operator=(platform::FileMapping&& other) noexcept -> FileMapping& {
         _memory_map_handle = other._memory_map_handle;
         _pointer = other._pointer;
         _size = other._size;
@@ -50,11 +50,11 @@ namespace chronos::platform {
         return *this;
     }
 
-    auto FileMapping::operator*() const noexcept -> const libdebug::u8* {
+    auto FileMapping::operator*() const noexcept -> const u8* {
         return _pointer;
     }
 
-    File::File(std::filesystem::path file_path, chronos::platform::FileFlags flags) ://NOLINT
+    File::File(std::filesystem::path file_path, platform::FileFlags flags) ://NOLINT
             _path {std::move(file_path)},
             _flags {flags} {
         const auto path = kstd::utils::to_wcs(_path.string());
@@ -85,7 +85,7 @@ namespace chronos::platform {
         _file_handle = ::CreateFileW(path.data(), access, 0, nullptr, exists ? OPEN_EXISTING : CREATE_NEW,
                                      FILE_ATTRIBUTE_NORMAL, nullptr);
         if(_file_handle == invalid_file_handle) {
-            throw std::runtime_error {fmt::format("Unable to open file: {}", libdebug::platform::get_last_error())};
+            throw std::runtime_error {fmt::format("Unable to open file: {}", platform::get_last_error())};
         }
     }
 
@@ -134,7 +134,7 @@ namespace chronos::platform {
         const auto file_mapping_handle = ::CreateFileMapping(_file_handle, nullptr, flags, 0, 0, nullptr);
         if(file_mapping_handle == nullptr) {
             return kstd::Error {
-                    fmt::format("Unable to map the file into the memory: {}", libdebug::platform::get_last_error())};
+                    fmt::format("Unable to map the file into the memory: {}", platform::get_last_error())};
         }
 
         // Create desired access
@@ -156,16 +156,16 @@ namespace chronos::platform {
         const auto base_ptr = ::MapViewOfFile(file_mapping_handle, desired_access, 0, 0, 0);
         if(base_ptr == nullptr) {
             CloseHandle(file_mapping_handle);
-            return kstd::Error {fmt::format("{}", libdebug::platform::get_last_error())};
+            return kstd::Error {fmt::format("{}", platform::get_last_error())};
         }
 
-        return {{static_cast<libdebug::u8*>(base_ptr), file_mapping_handle, file_size}};
+        return {{static_cast<u8*>(base_ptr), file_mapping_handle, file_size}};
     }
 
-    auto File::get_file_size() const noexcept -> kstd::Result<libdebug::usize> {
+    auto File::get_file_size() const noexcept -> kstd::Result<usize> {
         DWORD file_size = 0;
         if(::GetFileSize(_file_handle, &file_size) == INVALID_FILE_SIZE) {
-            return kstd::Error {fmt::format("Unable to get size of file: {}", libdebug::platform::get_last_error())};
+            return kstd::Error {fmt::format("Unable to get size of file: {}", platform::get_last_error())};
         }
         return file_size;
     }
@@ -177,5 +177,5 @@ namespace chronos::platform {
         other._file_handle = invalid_file_handle;
         return *this;
     }
-}// namespace chronos::platform
+}// namespace platform
 #endif

@@ -19,11 +19,6 @@
 
 #pragma once
 #include <kstd/result.hpp>
-#ifdef COMPILER_MSVC
-#include <intrin.h>
-#else
-#include <cpuid.h>
-#endif
 
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
@@ -40,31 +35,4 @@ namespace libdebug::platform {
      * @since  09/03/2024
      */
     auto get_last_error() noexcept -> std::string;
-
-    /**
-     * This function returns whether the current system uses a FPU. This is being used to configure Capstone for the
-     * target system.
-     *
-     * @return Whether the current system uses a FPU
-     * @author Cedric Hammes
-     * @since  10/03/2024
-     */
-    inline auto is_fpu_present() noexcept -> bool {
-#if defined(ARCH_X86)
-#ifdef COMPILER_MSVC
-        int values[4];
-        __cpuid(values, 1);
-        return (values[3] & 0b1) == 0b1;
-#else
-        auto eax = 1;
-        auto edx = 0;
-        auto ecx = 0;
-        auto ebx = 0;
-        __cpuid(eax, eax, ebx, ecx, edx);
-        return (edx & 0b1) == 0b1;
-#endif
-#else
-        return true;
-#endif
-    }
 }// namespace libdebug::platform

@@ -26,10 +26,6 @@
 #include <kstd/option.hpp>
 #include <kstd/result.hpp>
 
-#ifdef LIBDEBUG_CAPSTONE
-#include <capstone/capstone.h>
-#endif
-
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -45,34 +41,6 @@ namespace libdebug {
     using ProcessId = pid_t;
 #elif defined(PLATFORM_WINDOWS)
     using ProcessId = DWORD;
-#endif
-
-#ifdef LIBDEBUG_CAPSTONE
-#if defined(ARCH_X86_64)
-#ifdef CPU_64_BIT
-    constexpr auto target_cs_mode = CS_MODE_64;
-#else
-    constexpr auto target_cs_mode = CS_MODE_32;
-#endif
-#elif defined(ARCH_ARM)
-#ifdef CPU_64_BIT
-    constexpr auto target_cs_mode = CS_MODE_ARM;
-#else
-    constexpr auto target_cs_mode = CS_MODE_ARM;
-#endif
-#elif defined(ARCH_RISCV)
-#ifdef CPU_64_BIT
-    constexpr auto target_cs_mode = CS_MODE_RISCV64;
-#else
-    constexpr auto target_cs_mode = CS_MODE_RISCV32;
-#endif
-#endif
-#endif
-
-#ifdef LIBDBG_BIG_ENDIAN
-    constexpr auto target_endian = CS_MODE_BIG_ENDIAN;
-#else
-    constexpr auto target_endian = CS_MODE_LITTLE_ENDIAN;
 #endif
     
     /**
