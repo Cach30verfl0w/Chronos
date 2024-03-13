@@ -17,9 +17,8 @@
  * @since  09/03/2024
  */
 
-#ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_LINUX
 #include "libdebug/platform/platform.hpp"
-#include <kstd/utils.hpp>
 
 namespace libdebug::platform {
     /**
@@ -31,19 +30,7 @@ namespace libdebug::platform {
      * @since  09/03/2024
      */
     auto get_last_error() noexcept -> std::string {
-        const auto last_error_code = ::GetLastError();
-        if(last_error_code == NO_ERROR) {
-            return "No error occurred";
-        }
-
-        LPWSTR error_buffer = nullptr;
-        constexpr auto language_id = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
-        const auto new_length = ::FormatMessageW(
-                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
-                last_error_code, language_id, reinterpret_cast<LPWSTR>(&error_buffer), 0, nullptr);
-        const auto message = kstd::utils::to_mbs({error_buffer, new_length});
-        LocalFree(error_buffer);
-        return message;
+        return ::strerror(errno);
     }
-}// namespace chronos::platform
+}// namespace libdebug::platform
 #endif

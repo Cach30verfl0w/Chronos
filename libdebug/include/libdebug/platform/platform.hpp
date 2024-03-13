@@ -23,9 +23,19 @@
 #ifdef PLATFORM_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#else
+#include <unistd.h>
 #endif
 
 namespace libdebug::platform {
+#ifdef PLATFORM_WINDOWS
+    using FileHandle = HANDLE;
+    using TaskId = DWORD;
+#else
+    using FileHandle = int;
+    using TaskId = pid_t;
+#endif
+
     /**
      * This function returns the last thrown error in this program. This is being used to print the error thrown by the
      * System API to the user.

@@ -1,5 +1,4 @@
 BasedOnStyle: LLVM
-AccessModifierOffset: 0
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: None
 AlignOperands: Align
@@ -65,5 +64,7 @@ SpacesInSquareBrackets: false
 PackConstructorInitializers: Never
 ConstructorInitializerIndentWidth: 8
 BreakBeforeConceptDeclarations: Always
+EmptyLineBeforeAccessModifier: Always
+AccessModifierOffset: -4
 TabWidth: 4
 UseTab: Never

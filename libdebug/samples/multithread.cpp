@@ -12,25 +12,32 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-/**
- * @author Cedric Hammes
- * @since  09/03/2024
- */
+#include <thread>
+#include <iostream>
 
-#ifdef PLATFORM_LINUX
-#include "libdebug/platform/platform.hpp"
-
-namespace libdebug::platform {
-    /**
-     * This method returns the last thrown error in this program. This is being used to print the error thrown by the
-     * System API to the user.
-     *
-     * @return The last thrown error as a message
-     * @author Cedric Hammes
-     * @since  09/03/2024
-     */
-    auto get_last_error() noexcept -> std::string {
-        return ::strerror(errno);
-    }
-}// namespace libdebug::platform
+#ifdef PLATFORM_WINDOWS
+#include <processthreadsapi.h>
+#else
+#include <unistd.h>
 #endif
+
+auto print_tid() noexcept -> void {
+#ifdef PLATFORM_WINDOWS
+    const auto thread_id = ::GetCurrentThreadId();
+#else
+    const auto thread_id = ::gettid();
+#endif
+
+    printf("%i (%i)\n", ::getpid(), thread_id);
+
+    using namespace std::chrono_literals;
+    while(true) {
+
+    }
+}
+
+auto main() noexcept -> int {
+    auto thread = std::thread {print_tid};
+    print_tid();
+    return 0;
+}

@@ -14,11 +14,11 @@
 
 /**
  * @author Cedric Hammes
- * @since  09/03/2024
+ * @since  13/03/2024
  */
 
 #ifdef PLATFORM_LINUX
-#include "libdebug/libdebug.hpp"
+#include "libdebug/process.hpp"
 
 namespace libdebug {
     /**
@@ -28,8 +28,8 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    Breakpoint::Breakpoint(const libdebug::DebugContext* debug_context, std::intptr_t target_address) noexcept ://NOLINT
-            _debug_context {debug_context},
+    Breakpoint::Breakpoint(const libdebug::ProcessContext* context, std::intptr_t target_address) noexcept ://NOLINT
+            _process_context {context},
             _address {target_address},
             _enabled {false},
             _saved_data {} {
@@ -45,7 +45,7 @@ namespace libdebug {
      */
     auto Breakpoint::enable() noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(_enabled || !_debug_context->is_process_running()) {
+        if(_enabled || !_process_context->is_process_running()) {
             return kstd::Error {"Unable to enable breakpoint: No process is running and breakpoint is not enabled"s};
         }
 
@@ -53,15 +53,15 @@ namespace libdebug {
 
         // Read the data at the specified address and save instruction data
         errno = 0;
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _debug_context->get_process_id(), _address, nullptr);
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_context->get_process_id(), _address, nullptr);
         if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
-        _saved_data = static_cast<u8>(data & 0xFF);
+        _saved_data = static_cast<kstd::u8>(data & 0xFF);
 
         // Replace instruction at address with interrupt instruction TODO: Different values for different architectures
-        const u64 software_interrupt_instruction = 0xCC;
-        if(::ptrace(PTRACE_POKEDATA, _debug_context->get_process_id(), _address,
+        const kstd::u64 software_interrupt_instruction = 0xCC;
+        if(::ptrace(PTRACE_POKEDATA, _process_context->get_process_id(), _address,
                     (data & ~0xFF) | software_interrupt_instruction) < 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
@@ -82,19 +82,19 @@ namespace libdebug {
      */
     auto Breakpoint::disable() noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(!_enabled || !_debug_context->is_process_running()) {
+        if(!_enabled || !_process_context->is_process_running()) {
             return kstd::Error {"Unable to disable breakpoint: No process is running or not enabled"s};
         }
 
         // Read the data at the specified address
         errno = 0;
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _debug_context->get_process_id(), _address, nullptr);
+        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_context->get_process_id(), _address, nullptr);
         if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
         // Remove interrupt instruction and insert restored data
-        if(::ptrace(PTRACE_POKEDATA, _debug_context->get_process_id(), _address, (data & ~0xFF) | _saved_data) < 0) {
+        if(::ptrace(PTRACE_POKEDATA, _process_context->get_process_id(), _address, (data & ~0xFF) | _saved_data) < 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
@@ -103,18 +103,10 @@ namespace libdebug {
         return {};
     }
 
-    /**
-     * This constructor starts the specified path to the executable with the specified arguments in subprocess and
-     * attaches the debugger context to it.
-     *
-     * @param executable The path to the executable to debug
-     * @param arguments  The command-line arguments
-     * @author           Cedric Hammes
-     * @since            09/03/2024
-     */
-    DebugContext::DebugContext(const std::filesystem::path& executable,
-                               const std::vector<std::string>& arguments) ://NOLINT
-            _breakpoints {} {
+    ProcessContext::ProcessContext(const std::filesystem::path& executable_path,
+                                   const std::vector<std::string>& arguments) ://NOLINT
+            _breakpoints {},
+            _threads {} {
         const auto child_process_id = ::fork();
         if(child_process_id == 0) {
             ::personality(ADDR_NO_RANDOMIZE);
@@ -123,10 +115,9 @@ namespace libdebug {
             }
 
             std::ostringstream joined_args {};
-            joined_args << executable;
+            joined_args << executable_path;
             std::copy(arguments.cbegin(), arguments.cend(), std::ostream_iterator<std::string>(joined_args, " "));
-            ::printf("%s\n", joined_args.str().c_str()); // TODO: Remove
-            ::execl(executable.c_str(), joined_args.str().c_str(), nullptr);
+            ::execl(executable_path.c_str(), joined_args.str().c_str(), nullptr);
         }
         else if(child_process_id > 0) {
             _process_id = child_process_id;
@@ -136,37 +127,18 @@ namespace libdebug {
         }
     }
 
-    /**
-     * This function continues the execution of the program when the program is running.
-     *
-     * @param await_signal Wait for signal after continue
-     * @return             Void or an error
-     * @author             Cedric Hammes
-     * @since              09/03/2024
-     */
-    auto DebugContext::continue_execution(bool await_signal) const noexcept -> kstd::Result<kstd::Option<Signal>> {
-        using namespace std::string_literals;
-        if(!is_process_running()) {
-            return kstd::Error {"Unable to wait for signal: The process is not running"s};
+    ProcessContext::ProcessContext(platform::TaskId process_id) ://NOLINT
+            _process_id {process_id},
+            _breakpoints {},
+            _threads {} {
+        if (!std::filesystem::exists(fmt::format("/proc/{}", _process_id))) {
+            throw std::runtime_error {fmt::format("Failed to attach to process: {} doesn't exists", _process_id)};
         }
 
-        // TODO: Jump before breakpoint, remove breakpoint and then resume execution when instruction counter is set
-        //  to some breakpoint
-
-        if(::ptrace(PTRACE_CONT, _process_id, nullptr, nullptr) < 0) {
-            return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
+        for(const auto& task_dir : std::filesystem::directory_iterator {fmt::format("/proc/{}/task", process_id)}) {
+            const auto task_id = std::stoi(task_dir.path().filename().c_str());
+            _threads.insert(std::pair(task_id, ThreadContext {_process_id, task_id}));
         }
-
-        // Await signal when enabled
-        if(await_signal) {
-            const auto result = wait_for_signal();
-            if(result.is_error()) {
-                return kstd::Error {result.get_error()};
-            }
-
-            return {{*result}};
-        }
-        return {};
     }
 
     /**
@@ -177,7 +149,7 @@ namespace libdebug {
      * @author        Cedric Hammes
      * @since         09/03/2024
      */
-    auto DebugContext::add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
+    auto ProcessContext::add_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
         if(!is_process_running()) {
             return kstd::Error {"Unable to add breakpoint: No process is running"s};
@@ -204,7 +176,7 @@ namespace libdebug {
      * @author        Cedric Hammes
      * @since         09/03/2024
      */
-    auto DebugContext::remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
+    auto ProcessContext::remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
         if(!is_process_running()) {
             return kstd::Error {"Unable to remove breakpoint: No process is running"s};
@@ -223,35 +195,6 @@ namespace libdebug {
     }
 
     /**
-     * This function waits for the next debug signal by the debug target process. While the signal is being awaited,
-     * the thread where this function is invoked is blocked by this function.
-     *
-     * @return Void or an error
-     * @author Cedric Hammes
-     * @since  09/03/2024
-     */
-    auto DebugContext::wait_for_signal() const noexcept -> kstd::Result<Signal> {
-        using namespace std::string_literals;
-        if(!is_process_running()) {
-            return kstd::Error {"Unable to wait for signal: No process is running"s};
-        }
-
-        // Wait for signal and acquire info
-        int wait_status;
-        if(::waitpid(_process_id, &wait_status, 0) < 0) {
-            return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
-        }
-
-        siginfo_t signal_info {};
-        if(::ptrace(PTRACE_GETSIGINFO, _process_id, nullptr, &signal_info) < 0) {
-            return kstd::Error {fmt::format("Unable to wait for signal: {}", platform::get_last_error())};
-        }
-
-        // Return signal built by info
-        return {Signal {signal_info}};
-    }
-
-    /**
      * This function checks whether the process bound with the debug context is still running or has been
      * terminated.
      *
@@ -259,7 +202,7 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    auto DebugContext::is_process_running() const noexcept -> kstd::Result<bool> {
+    auto ProcessContext::is_process_running() const noexcept -> kstd::Result<bool> {
         return ::kill(_process_id, 0) != -1 || errno != ESRCH;
     }
 }// namespace libdebug

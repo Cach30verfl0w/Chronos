@@ -14,43 +14,32 @@
 
 /**
  * @author Cedric Hammes
- * @since  09/03/2024
+ * @since  13/03/2024
  */
 
 #pragma once
 #include "libdebug/platform/platform.hpp"
-#include "libdebug/signal.hpp"
-#include "libdebug/utils.hpp"
+#include "libdebug/thread.hpp"
 #include <filesystem>
-#include <kstd/defaults.hpp>
-#include <kstd/option.hpp>
-#include <kstd/result.hpp>
+#include <kstd/types.hpp>
+#include <unordered_map>
+#include <vector>
 
-#ifdef PLATFORM_WINDOWS
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#else
+#ifdef PLATFORM_LINUX
 #include <csignal>
 #include <sys/personality.h>
 #include <sys/ptrace.h>
-#include <sys/wait.h>
 #endif
 
 namespace libdebug {
-#ifdef PLATFORM_LINUX
-    using ProcessId = pid_t;
-#elif defined(PLATFORM_WINDOWS)
-    using ProcessId = DWORD;
-#endif
-    
     /**
      * This class is representing a single process being debugged by this application. This context can be initialized
      * by starting a subprocess that is being debugged or attach to an existing process.
      *
      * @author Cedric Hammes
-     * @since  09/03/2024
+     * @since  13/03/2024
      */
-    class DebugContext;
+    class ProcessContext;
 
     /**
      * This class is representing a single breakpoint on some address. This is used by the debug context to handle
@@ -60,19 +49,19 @@ namespace libdebug {
      * @since  09/03/2024
      */
     class Breakpoint final {
-        const DebugContext* _debug_context;
+        const ProcessContext* _process_context;
         std::intptr_t _address;
         bool _enabled;
-        u8 _saved_data;
+        kstd::u8 _saved_data;
 
-        public:
+    public:
         /**
          * This constructor constructs an empty breakpoint
          *
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        Breakpoint(const DebugContext* debug_context, std::intptr_t target_address) noexcept;
+        Breakpoint(const ProcessContext* process_context, std::intptr_t target_address) noexcept;
         ~Breakpoint() noexcept = default;
         KSTD_DEFAULT_MOVE_COPY(Breakpoint, Breakpoint);
 
@@ -124,36 +113,34 @@ namespace libdebug {
      * by starting a subprocess that is being debugged or attach to an existing process.
      *
      * @author Cedric Hammes
-     * @since  09/03/2024
+     * @since  13/03/2024
      */
-    class DebugContext final {
+    class ProcessContext final {
+        platform::TaskId _process_id;
         std::unordered_map<std::intptr_t, Breakpoint> _breakpoints;
-        ProcessId _process_id;
+        std::unordered_map<platform::TaskId, ThreadContext> _threads;
 
-        public:
+    public:
         /**
-         * This constructor starts the specified path to the executable with the specified arguments in subprocess and
-         * attaches the debugger context to it.
+         * This constructor starts the specified path to the executable with the specified arguments in subprocess
+         * and attaches the debugger context to it.
          *
          * @param executable The path to the executable to debug
          * @param arguments  The command-line arguments
          * @author           Cedric Hammes
-         * @since            09/03/2024
+         * @since            13/03/2024
          */
-        DebugContext(const std::filesystem::path& executable, const std::vector<std::string>& arguments);
-        ~DebugContext() noexcept = default;
-        KSTD_DEFAULT_MOVE(DebugContext, DebugContext);
-        KSTD_NO_COPY(DebugContext, DebugContext);
+        ProcessContext(const std::filesystem::path& executable_path, const std::vector<std::string>& arguments);
 
         /**
-         * This function continues the execution of the program when the program is running.
+         * This constructor attaches the debugger to the specified process, identified by the specified process
+         * id.
          *
-         * @param await_signal Wait for signal after continue
-         * @return             Optional signal after continue or an error
-         * @author             Cedric Hammes
-         * @since              09/03/2024
+         * @param process_id The pid of the target process
+         * @author           Cedric Hammes
+         * @since            13/03/2024
          */
-        [[nodiscard]] auto continue_execution(bool await_signal) const noexcept -> kstd::Result<kstd::Option<Signal>>;
+        explicit ProcessContext(platform::TaskId process_id);
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before
@@ -176,16 +163,6 @@ namespace libdebug {
         [[nodiscard]] auto remove_breakpoint(std::intptr_t address) noexcept -> kstd::Result<void>;
 
         /**
-         * This function waits for the next debug signal by the debug target process. While the signal is being awaited,
-         * the thread where this function is invoked is blocked by this function.
-         *
-         * @return Void or an error
-         * @author Cedric Hammes
-         * @since  09/03/2024
-         */
-        [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<Signal>;
-
-        /**
          * This function checks whether the process bound with the debug context is still running or has been
          * terminated.
          *
@@ -193,10 +170,10 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        [[nodiscard]] auto is_process_running() const noexcept -> kstd::Result<bool>;
+        auto is_process_running() const noexcept -> kstd::Result<bool>;
 
         /**
-         * This method returns a const reference to all registered breakpoints in the debug context
+         * This method returns a const reference to all registered breakpoints in the process context
          *
          * @return All active breakpoints
          * @author Cedric Hammes
@@ -208,13 +185,25 @@ namespace libdebug {
         }
 
         /**
+         * This method returns a const reference to all registered threads in the process context
+         *
+         * @return All registered thread
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] inline auto get_threads() const noexcept
+                -> const std::unordered_map<platform::TaskId, ThreadContext>& {
+            return _threads;
+        }
+
+        /**
          * This method returns the process id of the running process.
          *
          * @return The running process id
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        [[nodiscard]] inline auto get_process_id() const noexcept -> ProcessId {
+        [[nodiscard]] inline auto get_process_id() const noexcept -> platform::TaskId {
             return _process_id;
         }
     };
