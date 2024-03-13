@@ -28,3 +28,16 @@ TEST(libdebug_ProcessContext, test_multi_thread_attach) {
         ::kill(child_pid, SIGKILL);
     }
 }
+
+TEST(libdebug_ProcessContext, test_single_thread_attach) {
+    const auto child_pid = ::fork();
+    if (child_pid == 0) {
+        ::personality(ADDR_NO_RANDOMIZE);
+        ::execle(SAMPLE_SINGLETHREAD_FILE, SAMPLE_SINGLETHREAD_FILE);
+    } else {
+        sleep(1);
+        const auto process_context = libdebug::ProcessContext {child_pid};
+        ASSERT_EQ(process_context.get_threads().size(), 1);
+        ::kill(child_pid, SIGKILL);
+    }
+}
