@@ -51,7 +51,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        Breakpoint(std::intptr_t target_address) noexcept;
+        explicit Breakpoint(std::intptr_t target_address) noexcept;
         ~Breakpoint() noexcept = default;
         KSTD_DEFAULT_MOVE_COPY(Breakpoint, Breakpoint);
 
