@@ -28,8 +28,7 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    Breakpoint::Breakpoint(const libdebug::ProcessContext* context, std::intptr_t target_address) noexcept ://NOLINT
-            _process_context {context},
+    Breakpoint::Breakpoint(std::intptr_t target_address) noexcept ://NOLINT
             _address {target_address},
             _enabled {false},
             _saved_data {} {
@@ -43,26 +42,24 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    auto Breakpoint::enable() noexcept -> kstd::Result<void> {
+    auto Breakpoint::enable(const ThreadContext& thread_context) noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(_enabled || !_process_context->is_process_running()) {
-            return kstd::Error {"Unable to enable breakpoint: No process is running and breakpoint is not enabled"s};
+        const auto thread_id = thread_context.get_thread_id();
+        if(!platform::is_process_running(thread_id)) {
+            return kstd::Error {"Unable to enable breakpoint: No process is running"s};
         }
-
-        // TODO: Check if specified address is instruction
 
         // Read the data at the specified address and save instruction data
         errno = 0;
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_context->get_process_id(), _address, nullptr);
+        const auto data = ::ptrace(PTRACE_PEEKDATA, thread_id, _address, nullptr);
         if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
-        _saved_data = static_cast<kstd::u8>(data & 0xFF);
 
         // Replace instruction at address with interrupt instruction TODO: Different values for different architectures
-        const kstd::u64 software_interrupt_instruction = 0xCC;
-        if(::ptrace(PTRACE_POKEDATA, _process_context->get_process_id(), _address,
-                    (data & ~0xFF) | software_interrupt_instruction) < 0) {
+        const kstd::u64 instruction = 0xCC;
+        _saved_data = static_cast<kstd::u8>(data & 0xFF);
+        if(::ptrace(PTRACE_POKEDATA, thread_id, _address, (data & ~0xFF) | instruction) < 0) {
             return kstd::Error {fmt::format("Unable to enable breakpoint: {}", platform::get_last_error())};
         }
 
@@ -80,21 +77,22 @@ namespace libdebug {
      * @author Cedric Hammes
      * @since  09/03/2024
      */
-    auto Breakpoint::disable() noexcept -> kstd::Result<void> {
+    auto Breakpoint::disable(const ThreadContext& thread_context) noexcept -> kstd::Result<void> {
         using namespace std::string_literals;
-        if(!_enabled || !_process_context->is_process_running()) {
-            return kstd::Error {"Unable to disable breakpoint: No process is running or not enabled"s};
+        const auto thread_id = thread_context.get_thread_id();
+        if(!platform::is_process_running(thread_id)) {
+            return kstd::Error {"Unable to disable breakpoint: No process is running"s};
         }
 
         // Read the data at the specified address
         errno = 0;
-        const auto data = ::ptrace(PTRACE_PEEKDATA, _process_context->get_process_id(), _address, nullptr);
+        const auto data = ::ptrace(PTRACE_PEEKDATA, thread_id, _address, nullptr);
         if(data < 0 && errno != 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
         // Remove interrupt instruction and insert restored data
-        if(::ptrace(PTRACE_POKEDATA, _process_context->get_process_id(), _address, (data & ~0xFF) | _saved_data) < 0) {
+        if(::ptrace(PTRACE_POKEDATA, thread_id, _address, (data & ~0xFF) | _saved_data) < 0) {
             return kstd::Error {fmt::format("Unable to disable breakpoint: {}", platform::get_last_error())};
         }
 
@@ -121,6 +119,7 @@ namespace libdebug {
         }
         else if(child_process_id > 0) {
             _process_id = child_process_id;
+            _threads.insert(std::pair(_process_id, ThreadContext {_process_id, _process_id}));
         }
         else {
             throw std::runtime_error {fmt::format("Unable to create debugged process: {}", platform::get_last_error())};
@@ -128,18 +127,24 @@ namespace libdebug {
     }
 
     ProcessContext::ProcessContext(platform::TaskId process_id) ://NOLINT
-            _process_id {process_id},
             _breakpoints {},
+            _process_id {process_id},
             _threads {} {
-        if (!std::filesystem::exists(fmt::format("/proc/{}", _process_id))) {
+        if(!std::filesystem::exists(fmt::format("/proc/{}", _process_id))) {
             throw std::runtime_error {fmt::format("Failed to attach to process: {} doesn't exists", _process_id)};
         }
 
         for(const auto& task_dir : std::filesystem::directory_iterator {fmt::format("/proc/{}/task", process_id)}) {
             const auto task_id = std::stoi(task_dir.path().filename().c_str());
+            if(::ptrace(PTRACE_ATTACH, task_id, nullptr, nullptr) < 0) {
+                throw std::runtime_error {fmt::format("Unable to attach to thread {} of {}: {}", task_id, _process_id,
+                                                      platform::get_last_error())};
+            }
             _threads.insert(std::pair(task_id, ThreadContext {_process_id, task_id}));
         }
     }
+
+    // TODO: Add register new thread method (Add breakpoints of other threads to this new thread)
 
     /**
      * This function adds a breakpoint at the specified address when no breakpoint was added before
@@ -159,10 +164,11 @@ namespace libdebug {
             return kstd::Error {"Unable to set breakpoint: Breakpoint is already set"s};
         }
 
-        // Create and set breakpoint
-        Breakpoint breakpoint {this, address};
-        if(const auto enable_result = breakpoint.enable(); enable_result.is_error()) {
-            return kstd::Error {enable_result.get_error()};
+        Breakpoint breakpoint {address};
+        for(const auto& [_, thread] : _threads) {
+            if(const auto enable_result = breakpoint.enable(thread); enable_result.is_error()) {
+                return kstd::Error {enable_result.get_error()};
+            }
         }
         _breakpoints.insert(std::make_pair(address, breakpoint));
         return {};
@@ -187,8 +193,10 @@ namespace libdebug {
             return kstd::Error {"Unable to set breakpoint: Breakpoint is not set"s};
         }
 
-        if(const auto disable_result = breakpoint->second.disable(); disable_result.is_error()) {
-            return kstd::Error {disable_result.get_error()};
+        for(const auto& [_, thread] : _threads) {
+            if(const auto disable_result = breakpoint->second.disable(thread); disable_result.is_error()) {
+                return kstd::Error {disable_result.get_error()};
+            }
         }
         _breakpoints.erase(address);
         return {};
@@ -203,7 +211,7 @@ namespace libdebug {
      * @since  09/03/2024
      */
     auto ProcessContext::is_process_running() const noexcept -> kstd::Result<bool> {
-        return ::kill(_process_id, 0) != -1 || errno != ESRCH;
+        return platform::is_process_running(_process_id);
     }
 }// namespace libdebug
 #endif

@@ -68,6 +68,7 @@ foreach (SAMPLE_FILE ${SAMPLE_FILES})
     add_executable(${SAMPLE_NAME} "${SAMPLE_FILE}")
     set_target_properties(${SAMPLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/libdebug/samples")
     set_target_properties(${SAMPLE_NAME} PROPERTIES SUFFIX ".out")
+    target_link_options(${SAMPLE_NAME} PUBLIC -no-pie) # Disable PIE on Linux because it is not supported yet
     add_dependencies(libdebug-tests ${SAMPLE_NAME})
 
     # Add macro reference to file

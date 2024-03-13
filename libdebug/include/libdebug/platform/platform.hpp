@@ -25,6 +25,7 @@
 #include <Windows.h>
 #else
 #include <unistd.h>
+#include <csignal>
 #endif
 
 namespace libdebug::platform {
@@ -45,4 +46,14 @@ namespace libdebug::platform {
      * @since  09/03/2024
      */
     auto get_last_error() noexcept -> std::string;
+
+    /**
+     * This function checks whether the process bound with the debug context is still running or has been
+     * terminated.
+     *
+     * @return Whether the process is still running
+     * @author Cedric Hammes
+     * @since  09/03/2024
+     */
+    auto is_process_running(TaskId task_id) noexcept -> kstd::Result<bool>;
 }// namespace libdebug::platform

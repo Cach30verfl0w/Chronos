@@ -29,15 +29,13 @@ auto print_tid() noexcept -> void {
 #endif
 
     printf("%i (%i)\n", ::getpid(), thread_id);
-
-    using namespace std::chrono_literals;
-    while(true) {
-
-    }
+    while (true) {}
 }
 
 auto main() noexcept -> int {
     auto thread = std::thread {print_tid};
-    print_tid();
+    thread.join();
+
+    // print_tid();
     return 0;
 }

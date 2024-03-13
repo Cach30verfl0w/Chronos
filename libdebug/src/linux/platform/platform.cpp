@@ -32,5 +32,17 @@ namespace libdebug::platform {
     auto get_last_error() noexcept -> std::string {
         return ::strerror(errno);
     }
+
+    /**
+     * This function checks whether the process bound with the debug context is still running or has been
+     * terminated.
+     *
+     * @return Whether the process is still running
+     * @author Cedric Hammes
+     * @since  09/03/2024
+     */
+    auto is_process_running(TaskId task_id) noexcept -> kstd::Result<bool> {
+        return ::kill(task_id, 0) != -1 || errno != ESRCH;
+    }
 }// namespace libdebug::platform
 #endif

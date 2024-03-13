@@ -22,15 +22,28 @@
 
 #ifdef PLATFORM_LINUX
 #include <sys/ptrace.h>
+#include <sys/wait.h>
 #endif
 
 namespace libdebug {
     class ThreadContext {
         platform::TaskId _process_id;
         platform::TaskId _thread_id;
+        std::unordered_map<std::intptr_t, kstd::u8> _saved_breakpoint_data;
 
+        friend struct ProcessContext;
     public:
         ThreadContext(platform::TaskId _process_id, platform::TaskId _thread_id);
+
+        [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
+
+        [[nodiscard]] inline auto get_process_id() const noexcept -> platform::TaskId {
+            return _process_id;
+        }
+
+        [[nodiscard]] inline auto get_thread_id() const noexcept -> platform::TaskId {
+            return _thread_id;
+        }
 
         /**
          * This function returns whether this thread is the main thread of the parent
@@ -40,7 +53,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  13/03/2024
          */
-        inline auto is_main_thread() const noexcept -> bool {
+        [[nodiscard]] inline auto is_main_thread() const noexcept -> bool {
             return _process_id == _thread_id;
         }
     };

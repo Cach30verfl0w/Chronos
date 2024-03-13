@@ -31,16 +31,9 @@
 #include <sys/ptrace.h>
 #endif
 
-namespace libdebug {
-    /**
-     * This class is representing a single process being debugged by this application. This context can be initialized
-     * by starting a subprocess that is being debugged or attach to an existing process.
-     *
-     * @author Cedric Hammes
-     * @since  13/03/2024
-     */
-    class ProcessContext;
+// TODO: Ausprobieren ob multiple Threads mit einem ptrace gehandelt werden können.
 
+namespace libdebug {
     /**
      * This class is representing a single breakpoint on some address. This is used by the debug context to handle
      * breakpoints.
@@ -49,7 +42,6 @@ namespace libdebug {
      * @since  09/03/2024
      */
     class Breakpoint final {
-        const ProcessContext* _process_context;
         std::intptr_t _address;
         bool _enabled;
         kstd::u8 _saved_data;
@@ -61,7 +53,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        Breakpoint(const ProcessContext* process_context, std::intptr_t target_address) noexcept;
+        Breakpoint(std::intptr_t target_address) noexcept;
         ~Breakpoint() noexcept = default;
         KSTD_DEFAULT_MOVE_COPY(Breakpoint, Breakpoint);
 
@@ -73,7 +65,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        [[nodiscard]] auto enable() noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto enable(const ThreadContext& target_thread_context) noexcept -> kstd::Result<void>;
 
         /**
          * This function disables the breakpoint by replacing the inserted instruction at the specified address with the
@@ -83,7 +75,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        [[nodiscard]] auto disable() noexcept -> kstd::Result<void>;
+        [[nodiscard]] auto disable(const ThreadContext& target_thread_context) noexcept -> kstd::Result<void>;
 
         /**
          * This method returns the address to the breakpoint
@@ -170,7 +162,7 @@ namespace libdebug {
          * @author Cedric Hammes
          * @since  09/03/2024
          */
-        auto is_process_running() const noexcept -> kstd::Result<bool>;
+        inline auto is_process_running() const noexcept -> kstd::Result<bool>;
 
         /**
          * This method returns a const reference to all registered breakpoints in the process context
@@ -193,6 +185,17 @@ namespace libdebug {
          */
         [[nodiscard]] inline auto get_threads() const noexcept
                 -> const std::unordered_map<platform::TaskId, ThreadContext>& {
+            return _threads;
+        }
+
+        /**
+         * This method returns a const reference to all registered threads in the process context
+         *
+         * @return All registered thread
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] inline auto get_threads() noexcept -> std::unordered_map<platform::TaskId, ThreadContext>& {
             return _threads;
         }
 
