@@ -2,13 +2,16 @@
 Chronos is a multiple-platform compatible debugger and debugging library (libdebug), written in C++ with CMake. This project
 is made to learn more about the system internals/APIs and how debuggers work exactly.
 
+- Supported architectures: x86, x86_64, ARM, ARM64, RISCV32 and RISCV64
+- Supported platforms: Linux and Windows
+
 ## Features
 - [ ] Graphical UI for Chronos Application
 - [ ] Register Read Function with Support for x86/x86_64, ARM/ARM64 and RISC-V  in libdebug
 - [X] Breakpoints in libdebug
 - [ ] Full Windows Support in libdebug
 - [ ] Windows Signal Implementation in libdebug
-- [ ] Step over breakpoint when hit in `DebugContext#continue_execution`
+- [ ] Step over breakpoint when hit in execution continue
 - [ ] Read debug symbols in DebugContext (constructor with file)
 - [ ] Remote Debug Protocol for Chronos Application
 - [ ] Scripting Support for Chronos Application
