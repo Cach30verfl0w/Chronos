@@ -31,8 +31,6 @@
 #include <sys/ptrace.h>
 #endif
 
-// TODO: Ausprobieren ob multiple Threads mit einem ptrace gehandelt werden können.
-
 namespace libdebug {
     /**
      * This class is representing a single breakpoint on some address. This is used by the debug context to handle
