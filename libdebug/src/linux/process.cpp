@@ -182,7 +182,13 @@ namespace libdebug {
 
                     // Handle signal
                     if(status != 0) {
-                        return {Signal {&thread_context}};
+                        siginfo_t signal_info {};
+                        if(::ptrace(PTRACE_GETSIGINFO, _process_id, nullptr, &signal_info) < 0) {
+                            return kstd::Error {fmt::format("Failed signal wait on thread {}: {}", thread_id,
+                                                            platform::get_last_error())};
+                        }
+
+                        return {Signal {&thread_context, signal_info}};
                     }
 
                     // Break thread wait because timeout is elapsed // TODO: Configurable timeout

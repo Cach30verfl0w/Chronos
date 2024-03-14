@@ -20,13 +20,61 @@
 #pragma once
 #include "libdebug/thread.hpp"
 
+#ifdef PLATFORM_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#else
+#include <csignal>
+#endif
+
 namespace libdebug {
+#ifdef PLATFORM_WINDOWS
+    using SignalInfo = DEBUG_EVENT;
+#else
+    using SignalInfo = siginfo_t;
+#endif
+
     class Signal final {
         ThreadContext* _thread_context;
+        SignalInfo _signal_info;
 
     public:
-        explicit Signal(ThreadContext* thread_context) noexcept ://NOLINT
-                _thread_context {thread_context} {
+        explicit Signal(ThreadContext* thread_context, SignalInfo signal_info) noexcept ://NOLINT
+                _thread_context {thread_context},
+                _signal_info {signal_info} {
         }
+
+        /**
+         * This method returns a pointer to the context of the signaled thread
+         *
+         * @return The context of the thread
+         * @author Cedric Hammes
+         * @since  14/03/2024
+         */
+        [[nodiscard]] inline auto get_thread() const noexcept -> const ThreadContext* {
+            return _thread_context;
+        }
+
+        /**
+         * This function returns the info of the signal
+         *
+         * @return The signal's info
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] inline auto get_signal_info() const noexcept -> const SignalInfo& {
+            return _signal_info;
+        }
+
+
+        /**
+         * This function checks whether the signal is a breakpoint. If yes, the return type is true, otherwise the
+         * return type is false.
+         *
+         * @return Whether the signal is a breakpoint
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] auto is_breakpoint() const noexcept -> bool;
     };
 }// namespace libdebug
