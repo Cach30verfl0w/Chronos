@@ -158,13 +158,23 @@ namespace libdebug {
          * @since            13/03/2024
          */
         explicit ProcessContext(platform::TaskId process_id);
-        ~ProcessContext() noexcept = default;
+        ~ProcessContext() noexcept = default; // TODO: Implement force kill of process "and threads", then wait for all
         KSTD_DEFAULT_MOVE(ProcessContext, ProcessContext);
         KSTD_NO_COPY(ProcessContext, ProcessContext);
 
         inline auto add_event_callback(const EventCallback& callback, void* data) noexcept -> void {
             _event_callbacks.emplace_back(callback, data);
         }
+
+        /**
+         * This function continues the execution of all threads in the program which are currently hold by a
+         * breakpoint etc. TODO: Add function implementation
+         *
+         * @return Void or an error
+         * @author Cedric Hammes
+         * @since  09/03/2024
+         */
+        [[nodiscard]] auto continue_process() const noexcept -> kstd::Result<void>;
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before

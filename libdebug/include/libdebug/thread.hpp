@@ -39,6 +39,12 @@ namespace libdebug {
         KSTD_DEFAULT_MOVE(ThreadContext, ThreadContext);
         KSTD_NO_COPY(ThreadContext, ThreadContext);
 
+        // TODO: Implement function
+        [[nodiscard]] auto continue_thread() const noexcept -> kstd::Result<void>;
+
+        // TODO: implement register state as struct and implement function
+        [[nodiscard]] auto get_register_state() const noexcept -> kstd::Result<void>;
+
         [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
 
         [[nodiscard]] inline auto get_process_id() const noexcept -> platform::TaskId {
