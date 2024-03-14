@@ -14,13 +14,19 @@
 
 /**
  * @author Cedric Hammes
- * @since  13/03/2024
+ * @since  14/03/2024
  */
 
-#ifdef PLATFORM_LINUX
+#pragma once
 #include "libdebug/thread.hpp"
-#include <thread>
 
 namespace libdebug {
+    class Signal final {
+        ThreadContext* _thread_context;
+
+    public:
+        explicit Signal(ThreadContext* thread_context) noexcept ://NOLINT
+                _thread_context {thread_context} {
+        }
+    };
 }// namespace libdebug
-#endif

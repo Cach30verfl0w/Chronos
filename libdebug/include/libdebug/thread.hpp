@@ -19,6 +19,7 @@
 
 #pragma once
 #include "libdebug/platform/platform.hpp"
+#include <chrono>
 #include <kstd/defaults.hpp>
 
 #ifdef PLATFORM_LINUX
@@ -30,27 +31,39 @@ namespace libdebug {
     class ThreadContext {
         platform::TaskId _process_id;
         platform::TaskId _thread_id;
-        std::unordered_map<std::intptr_t, kstd::u8> _saved_breakpoint_data;
 
         friend struct ProcessContext;
+
     public:
-        ThreadContext(platform::TaskId _process_id, platform::TaskId _thread_id);
+        ThreadContext(platform::TaskId process_id, platform::TaskId thread_id) noexcept ://NOLINT
+                _process_id {process_id},
+                _thread_id {thread_id} {
+        }
+
         ~ThreadContext() noexcept = default;
         KSTD_DEFAULT_MOVE(ThreadContext, ThreadContext);
         KSTD_NO_COPY(ThreadContext, ThreadContext);
 
-        // TODO: Implement function
-        [[nodiscard]] auto continue_thread() const noexcept -> kstd::Result<void>;
-
-        // TODO: implement register state as struct and implement function
-        [[nodiscard]] auto get_register_state() const noexcept -> kstd::Result<void>;
-
-        [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
-
+        /**
+         * This function returns the id of the process in which this thread/task is
+         * running.
+         *
+         * @return The process id
+         * @author Cedric Hammes
+         * @since  14/03/2024
+         */
         [[nodiscard]] inline auto get_process_id() const noexcept -> platform::TaskId {
             return _process_id;
         }
 
+        /**
+         * This function returns a unique id referenced to this
+         * thread/task.
+         *
+         * @return The thread id
+         * @author Cedric Hammes
+         * @since  14/03/2024
+         */
         [[nodiscard]] inline auto get_thread_id() const noexcept -> platform::TaskId {
             return _thread_id;
         }
@@ -67,4 +80,4 @@ namespace libdebug {
             return _process_id == _thread_id;
         }
     };
-}
+}// namespace libdebug

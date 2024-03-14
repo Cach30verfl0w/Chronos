@@ -101,6 +101,15 @@ namespace libdebug {
         return {};
     }
 
+    /**
+     * This constructor starts the specified path to the executable with the specified arguments in subprocess
+     * and attaches the debugger context to it.
+     *
+     * @param executable The path to the executable to debug
+     * @param arguments  The command-line arguments
+     * @author           Cedric Hammes
+     * @since            13/03/2024
+     */
     ProcessContext::ProcessContext(const std::filesystem::path& executable_path,
                                    const std::vector<std::string>& arguments) ://NOLINT
             _event_callbacks {},
@@ -127,6 +136,14 @@ namespace libdebug {
         }
     }
 
+    /**
+     * This constructor attaches the debugger to the specified process, identified by the specified process
+     * id.
+     *
+     * @param process_id The pid of the target process
+     * @author           Cedric Hammes
+     * @since            13/03/2024
+     */
     ProcessContext::ProcessContext(platform::TaskId process_id) ://NOLINT
             _event_callbacks {},
             _breakpoints {},
@@ -146,7 +163,36 @@ namespace libdebug {
         }
     }
 
-    // TODO: Add register new thread method (Add breakpoints of other threads to this new thread)
+    auto ProcessContext::wait_for_signal() noexcept -> kstd::Result<Signal> {
+        using namespace std::chrono;
+
+        while(true) {
+            // Enumerate threads
+            for(auto& [thread_id, thread_context] : _threads) {
+                int status = 0;
+
+                // Wait for signal in single-thread timeout
+                const auto begin_timestamp = steady_clock::now();
+                while(true) {
+                    // Acquire signal
+                    if(::waitpid(thread_id, &status, WNOHANG) == -1) {
+                        return kstd::Error {fmt::format("Failed signal wait on thread {}: {}", thread_id,
+                                                        platform::get_last_error())};
+                    }
+
+                    // Handle signal
+                    if(status != 0) {
+                        return {Signal {&thread_context}};
+                    }
+
+                    // Break thread wait because timeout is elapsed // TODO: Configurable timeout
+                    if(duration_cast<milliseconds>(steady_clock::now() - begin_timestamp).count() >= 500) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * This function adds a breakpoint at the specified address when no breakpoint was added before

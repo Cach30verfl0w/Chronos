@@ -19,6 +19,7 @@
 
 #pragma once
 #include "libdebug/platform/platform.hpp"
+#include "libdebug/signal.hpp"
 #include "libdebug/thread.hpp"
 #include <filesystem>
 #include <kstd/types.hpp>
@@ -57,6 +58,15 @@ namespace libdebug {
     };
 
     using EventCallback = std::function<void(const ProcessEvent& event, void*)>;
+
+    /**
+     * This class is representing a single process being debugged by this application. This context can be initialized
+     * by starting a subprocess that is being debugged or attach to an existing process.
+     *
+     * @author Cedric Hammes
+     * @since  13/03/2024
+     */
+    class ProcessContext;
 
     /**
      * This class is representing a single breakpoint on some address. This is used by the debug context to handle
@@ -158,23 +168,24 @@ namespace libdebug {
          * @since            13/03/2024
          */
         explicit ProcessContext(platform::TaskId process_id);
-        ~ProcessContext() noexcept = default; // TODO: Implement force kill of process "and threads", then wait for all
+        ~ProcessContext() noexcept = default;
         KSTD_DEFAULT_MOVE(ProcessContext, ProcessContext);
         KSTD_NO_COPY(ProcessContext, ProcessContext);
 
+        [[nodiscard]] auto wait_for_signal() noexcept -> kstd::Result<Signal>;
+
+        /**
+         * This method adds the specified callback to the event callback
+         * list.
+         *
+         * @param callback The reference to the callback
+         * @param data     The in-callback modifiable data
+         * @author         Cedric Hammes
+         * @since          14/03/2024
+         */
         inline auto add_event_callback(const EventCallback& callback, void* data) noexcept -> void {
             _event_callbacks.emplace_back(callback, data);
         }
-
-        /**
-         * This function continues the execution of all threads in the program which are currently hold by a
-         * breakpoint etc. TODO: Add function implementation
-         *
-         * @return Void or an error
-         * @author Cedric Hammes
-         * @since  09/03/2024
-         */
-        [[nodiscard]] auto continue_process() const noexcept -> kstd::Result<void>;
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before

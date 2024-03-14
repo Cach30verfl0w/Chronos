@@ -28,7 +28,7 @@ auto print_tid() noexcept -> void {
     const auto thread_id = ::gettid();
 #endif
 
-    printf("%i (%i)\n", ::getpid(), thread_id);
+    printf("%d %i (%i)\n", ::getppid(), ::getpid(), thread_id);
     while (true) {}
 }
 
