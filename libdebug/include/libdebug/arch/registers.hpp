@@ -16,6 +16,7 @@
  * @author Cedric Hammes
  * @since  14/03/2024
  */
+#pragma once
 
 namespace libdebug::arch {
 
