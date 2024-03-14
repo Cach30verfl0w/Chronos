@@ -103,6 +103,7 @@ namespace libdebug {
 
     ProcessContext::ProcessContext(const std::filesystem::path& executable_path,
                                    const std::vector<std::string>& arguments) ://NOLINT
+            _event_callbacks {},
             _breakpoints {},
             _threads {} {
         const auto child_process_id = ::fork();
@@ -127,6 +128,7 @@ namespace libdebug {
     }
 
     ProcessContext::ProcessContext(platform::TaskId process_id) ://NOLINT
+            _event_callbacks {},
             _breakpoints {},
             _process_id {process_id},
             _threads {} {

@@ -32,6 +32,32 @@
 #endif
 
 namespace libdebug {
+    struct ProcessEvent final {
+        kstd::u8 event_type;
+        union {
+            // Create Thread Event (Event Type = 0) TODO: add PEB to variables
+            struct {
+                platform::TaskId process_id;
+                platform::TaskId thread_id;
+#ifdef PLATFORM_WINDOWS
+                HANDLE thread_handle;
+#endif
+            } create_thread_event;
+
+            // Delete Thread Event (Event Type = 1)
+            struct {
+                platform::TaskId process_id;
+                platform::TaskId thread_id;
+            } delete_thread_event;
+
+            // TODO: Exception event
+            // TODO: Breakpoint hit event
+            // TODO: Process exit event
+        };
+    };
+
+    using EventCallback = std::function<void(const ProcessEvent& event, void*)>;
+
     /**
      * This class is representing a single breakpoint on some address. This is used by the debug context to handle
      * breakpoints.
@@ -109,6 +135,7 @@ namespace libdebug {
         platform::TaskId _process_id;
         std::unordered_map<std::intptr_t, Breakpoint> _breakpoints;
         std::unordered_map<platform::TaskId, ThreadContext> _threads;
+        std::vector<std::pair<const EventCallback, void*>> _event_callbacks;
 
     public:
         /**
@@ -134,6 +161,10 @@ namespace libdebug {
         ~ProcessContext() noexcept = default;
         KSTD_DEFAULT_MOVE(ProcessContext, ProcessContext);
         KSTD_NO_COPY(ProcessContext, ProcessContext);
+
+        inline auto add_event_callback(const EventCallback& callback, void* data) noexcept -> void {
+            _event_callbacks.emplace_back(callback, data);
+        }
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before
