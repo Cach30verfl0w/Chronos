@@ -19,6 +19,7 @@
 
 #pragma once
 #include "libdebug/platform/platform.hpp"
+#include <kstd/defaults.hpp>
 
 #ifdef PLATFORM_LINUX
 #include <sys/ptrace.h>
@@ -34,6 +35,9 @@ namespace libdebug {
         friend struct ProcessContext;
     public:
         ThreadContext(platform::TaskId _process_id, platform::TaskId _thread_id);
+        ~ThreadContext() noexcept = default;
+        KSTD_DEFAULT_MOVE(ThreadContext, ThreadContext);
+        KSTD_NO_COPY(ThreadContext, ThreadContext);
 
         [[nodiscard]] auto wait_for_signal() const noexcept -> kstd::Result<void>;
 

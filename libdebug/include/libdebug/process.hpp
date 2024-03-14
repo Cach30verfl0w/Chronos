@@ -131,6 +131,9 @@ namespace libdebug {
          * @since            13/03/2024
          */
         explicit ProcessContext(platform::TaskId process_id);
+        ~ProcessContext() noexcept = default;
+        KSTD_DEFAULT_MOVE(ProcessContext, ProcessContext);
+        KSTD_NO_COPY(ProcessContext, ProcessContext);
 
         /**
          * This function adds a breakpoint at the specified address when no breakpoint was added before
