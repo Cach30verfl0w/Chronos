@@ -39,25 +39,26 @@ FetchContent_Populate(kstd-core)
 target_include_directories(debug PUBLIC "${CMAKE_BINARY_DIR}/_deps/kstd-core-src/include")
 target_include_directories(debug-static PUBLIC "${CMAKE_BINARY_DIR}/_deps/kstd-core-src/include")
 
-# Add gtest to libdebug-test
-message("Configure google test for libdebug")
-FetchContent_Declare(
-        google-test
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG main
-)
-FetchContent_MakeAvailable(google-test)
-enable_testing(TRUE)
-include(GoogleTest)
-
 # Add tests
-file(GLOB_RECURSE TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/libdebug/tests/*.c*")
-add_executable(libdebug-tests ${TEST_SOURCES})
-gtest_discover_tests(libdebug-tests)
-target_link_libraries(libdebug-tests PUBLIC gtest_main)
+if (LIBDEBUG_COMPILE_TESTS)
+    # Add gtest to libdebug-test
+    message("Configure google test for libdebug")
+    FetchContent_Declare(
+            google-test
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG main
+    )
+    FetchContent_MakeAvailable(google-test)
+    enable_testing(TRUE)
+    include(GoogleTest)
 
-target_link_libraries(libdebug-tests PRIVATE debug-static)
-add_dependencies(libdebug-tests debug-static)
+    file(GLOB_RECURSE TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/libdebug/tests/*.c*")
+    add_executable(libdebug-tests ${TEST_SOURCES})
+    gtest_discover_tests(libdebug-tests)
+    target_link_libraries(libdebug-tests PUBLIC gtest_main)
+    target_link_libraries(libdebug-tests PRIVATE debug-static)
+    add_dependencies(libdebug-tests debug-static)
+endif ()
 
 # Configure samples directory
 message("Configure samples directory for libdebug-tests")
